@@ -20,15 +20,15 @@ std::vector<std::string> splitCSV(const std::string& line) {
     fields.push_back(field);
     return fields;
 }
-bool isBoOneToThreeHundred(const std::string& id) {
-    if (id.size() < 4 || id.compare(0, 3, "Bo-") != 0) return false;
-    int number = 0;
-    for (size_t i = 3; i < id.size(); ++i) {
-        if (id[i] < '0' || id[i] > '9') return false;
-        number = number * 10 + (id[i] - '0');
-        if (number > 300) return false;
+bool isStarterCard(const std::string& id) {
+    if(id.size()<4 || id.compare(0,3,"St-")!=0)return false;
+    int number=0;
+    for(size_t i=3;i<id.size();++i) {
+        if(id[i]<'0'||id[i]>'9')return false;
+        number=number*10+(id[i]-'0');
+        if(number>111)return false;
     }
-    return number >= 1;
+    return number>=1;
 }
 int positive(const std::string& text) {
     if(text.empty()) return -1;
@@ -103,7 +103,7 @@ Result CardCatalog::loadCSV(const std::string& filename) {
         for(int j=0;j<4;++j)c.combatVerified=c.combatVerified&&(c.lost[j]>=0);
         c.combatVerified=c.combatVerified&&(c.cancelTarget=="A"||c.cancelTarget=="B"||c.cancelTarget=="C"||c.cancelTarget=="none");
         if(c.id.empty()||c.name.empty()||incoming.count(c.id))return {false,"Duplicate/empty card ID: "+c.id};
-        if (isBoOneToThreeHundred(c.id)) incoming[c.id]=c;
+        if(isStarterCard(c.id))incoming[c.id]=c;
     }
     if(incoming.empty())return {false,"No cards"};
     cards_.swap(incoming);
