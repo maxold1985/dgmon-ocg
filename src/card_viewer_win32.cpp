@@ -1,5 +1,6 @@
 #ifdef _WIN32
 #include "card_catalog.h"
+#include "auto_player.h"
 #include "card_viewer_paths.h"
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -23,7 +24,7 @@ const int W=1280;
 const int H=840;
 enum Action {
     NEW_GAME=1, REFILL, DISCARD, PLAN, PREPARE, EVOLVE, BATTLE, POINTS,
-    PREVIOUS, NEXT, CHOOSE_HAND, CHOOSE_PREVIEW
+    PREVIOUS, NEXT, CHOOSE_HAND, CHOOSE_PREVIEW, AUTO_TOGGLE, SPEED
 };
 struct Hotspot {
     RectF rect;
@@ -35,6 +36,11 @@ std::vector<const hc::CatalogCard*> collection;
 std::unique_ptr<hc::EngineCardBridge> bridge;
 hc::Engine engine(2026);
 bool matchStarted=false;
+bool autoRunning=false;
+bool demoOnly=false;
+unsigned autoInterval=1100;
+const UINT_PTR AUTO_TIMER=401;
+unsigned long demoTick=0;
 size_t currentCard=0;
 int selectedHand=-1;
 std::wstring feedback=L"Pronto. Escolha NOVA PARTIDA ou examine as cartas.";
@@ -119,6 +125,10 @@ const hc::CatalogCard* focusCard() {
     if(matchStarted&&selectedHand>=0) {
         const std::vector<int>& hand=engine.getPlayer(0).hand;
         if((size_t)selectedHand<hand.size())return cardFromInternal(hand[(size_t)selectedHand]);
+    }
+    if(matchStarted&&autoRunning) {
+        const hc::CatalogCard* active=cardFromInternal(engine.getPlayer(0).active);
+        if(active)return active;
     }
     return collection.empty()?0:collection[currentCard];
 }
