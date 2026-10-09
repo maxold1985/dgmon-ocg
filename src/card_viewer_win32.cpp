@@ -204,7 +204,7 @@ void drawField(Graphics& g) {
     if(enemyCards>6)enemyCards=6;
     for(int i=0;i<enemyCards;++i)cardBack(g,250+i*52,130,45,65);
     caption(g,L"DIGIMON",481,98,15,rgb(247,227,190),true);
-    cardBox(g,matchStarted?cardFromInternal(engine.getPlayer(1).active):(collection.size()>1?collection[1]:0),482,119,122,174);
+    cardBox(g,matchStarted?cardFromInternal(engine.getPlayer(1).active):(collection.size()>1?collection[(currentCard+7)%collection.size()]:0),482,119,122,174);
     caption(g,L"SUPORTE",627,121,14,rgb(216,231,231));
     cardBox(g,0,625,149,94,125);
     caption(g,L"NET OCEAN",782,110,14,rgb(216,231,231));
@@ -249,7 +249,9 @@ void drawSidebar(Graphics& g) {
         caption(g,wide(c->name),953,442,17,rgb(223,244,245));
         caption(g,c->isPlayableCore()?L"Regra basica validada":L"Regras incompletas",953,472,14,c->isPlayableCore()?rgb(115,214,155):rgb(255,157,132));
     }
-    button(g,NEW_GAME,L"NOVA PARTIDA",949,509,305,40,true);
+    button(g,NEW_GAME,L"NOVA",949,509,91,40,true);
+    button(g,AUTO_TOGGLE,autoRunning?L"PAUSAR":L"AUTO JOGAR",1047,509,136,40,true);
+    button(g,SPEED,autoInterval==550?L"0.5s":(autoInterval==1100?L"1.1s":L"2.2s"),1190,509,64,40,true);
     button(g,REFILL,L"REPOR",949,561,146,36,canPrepare());
     button(g,DISCARD,L"DESCARTAR",1107,561,147,36,canPrepare()&&selectedHand>=0);
     button(g,PLAN,L"PLANEJAR EVO",949,603,146,36,canPrepare()&&selectedHand>=0);
@@ -259,7 +261,7 @@ void drawSidebar(Graphics& g) {
     button(g,POINTS,L"PONTOS",949,687,146,36,canAct(hc::Phase::Points));
     button(g,PREVIOUS,L"< ANTERIOR",1107,687,70,36,!collection.empty());
     button(g,NEXT,L">",1183,687,71,36,!collection.empty());
-    caption(g,L"Setas: catalogo  |  N: partida",949,728,12,rgb(211,226,233));
+    caption(g,L"A: auto/pausa | N: nova | +/-: velocidade",949,728,12,rgb(211,226,233));
 }
 void render(Graphics& g) {
     hotspots.clear();
@@ -269,13 +271,14 @@ void render(Graphics& g) {
     for(int y=0;y<H;y+=28)g.DrawLine(&grid,0,y,W,y);
     fill(g,0,0,W,55,rgb(14,70,86));
     caption(g,L"DIGIMON CARD GAME  |  HYPER COLOSSEUM",20,10,25,rgb(254,224,141),true);
-    caption(g,L"Bo-1 a Bo-300   •   "+std::wstring(phaseText(matchStarted?engine.phase():hc::Phase::Setup)),748,18,17,rgb(224,248,247),true);
+    std::wstring mode=demoOnly?L"AUTO DEMO":(autoRunning?L"AUTO JOGO":(matchStarted?L"MANUAL":L"PREVIA"));
+    caption(g,L"Bo-1 a Bo-300 | "+mode+L" | "+std::wstring(phaseText(matchStarted?engine.phase():hc::Phase::Setup)),662,18,16,rgb(224,248,247),true);
     drawZones(g);
     drawField(g);
     drawSidebar(g);
     fill(g,0,766,W,74,rgb(10,61,78));
     caption(g,L"STATUS: "+feedback,21,778,16,rgb(245,240,199));
-    caption(g,L"Tabuleiro experimental • Sem efeitos nao verificados • Imagens locais • ESC fecha",21,809,12,rgb(195,217,229));
+    caption(g,L"Auto: motor de 2 jogadores com cartas verificadas. Sem regras: demonstracao visual. ESC fecha",21,809,12,rgb(195,217,229));
 }
 bool beginMatch() {
     if(!bridge)return false;
