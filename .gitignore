@@ -1,0 +1,9 @@
+build/
+build_vs2013/
+__pycache__/
+*.obj
+*.pdb
+*.exe
+*.lib
+*.pyc
+.DS_Store
