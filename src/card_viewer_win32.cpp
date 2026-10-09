@@ -401,8 +401,44 @@ void gameAction(Action a,int index) {
         feedback=L"Carta selecionada. Use DESCARTAR ou PLANEJAR EVO.";
         return;
     }
-    if(a==NEW_GAME){beginMatch();return;}
-    if(!matchStarted){feedback=L"Inicie uma partida primeiro.";return;}
+    if(a==AUTO_TOGGLE) {
+        if(autoRunning) {
+            autoRunning=false;
+            feedback=L"Jogo automatico pausado. Pressione AUTO para continuar.";
+        } else {
+            if(!matchStarted && !demoOnly) {
+                if(!beginMatch()) {
+                    demoOnly=true;
+                    demoTick=0;
+                    feedback=L"DEMO VISUAL: faltam cartas verificadas para uma partida oficial.";
+                }
+            } else if(matchStarted && engine.phase()==hc::Phase::Finished) {
+                if(!beginMatch()) {
+                    demoOnly=true;
+                    demoTick=0;
+                }
+            }
+            autoRunning=true;
+            if(!demoOnly)feedback=L"Jogo automatico ativo: o motor executa um passo por vez.";
+        }
+        return;
+    }
+    if(a==SPEED) {
+        autoInterval=autoInterval==550?1100:(autoInterval==1100?2200:550);
+        feedback=L"Velocidade: passo a cada "+std::to_wstring(autoInterval)+L" ms";
+        return;
+    }
+    if(a==NEW_GAME) {
+        autoRunning=false;
+        demoOnly=false;
+        beginMatch();
+        return;
+    }
+    if(!matchStarted){feedback=L"Sem partida validada. Use AUTO para demonstracao visual.";return;}
+    if(autoRunning) {
+        feedback=L"Pause o AUTO para jogar manualmente.";
+        return;
+    }
     hc::Result r;
     switch(a) {
         case REFILL:r=engine.replenish(0);break;
