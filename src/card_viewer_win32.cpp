@@ -481,9 +481,39 @@ void gameAction(Action a,int index) {
 int cardNumber(const hc::CatalogCard* c) {
     return std::atoi(c->id.c_str()+3);
 }
+void showCardInfo(HWND hwnd) {
+    const hc::CatalogCard* c=focusCard();
+    if(!c)return;
+    std::wstring details=L"ID: "+wide(c->id)+L"\nNOME: "+wide(c->name)+
+        L"\nCOLECAO: "+wide(c->set)+L"\nTIPO: "+wide(c->kind)+
+        L"\nNIVEL: "+wide(c->level)+L"\nBATTLE TYPE: "+wide(c->battleType);
+    if(c->kind=="Digimon") {
+        details+=L"\n\nATACK A: "+std::to_wstring(c->power[0])+
+            L"\nATACK B: "+std::to_wstring(c->power[1])+
+            L"\nATACK C: "+std::to_wstring(c->power[2]);
+        if(c->combatVerified)
+            details+=L"\nLOST III/IV/PERFECT/ULTIMATE: "+
+               std::to_wstring(c->lost[0])+L"/"+std::to_wstring(c->lost[1])+
+               L"/"+std::to_wstring(c->lost[2])+L"/"+std::to_wstring(c->lost[3]);
+        if(!c->evolutionRequirements.empty())
+            details+=L"\nEVOLUCAO: "+wide(c->evolutionRequirements);
+    } else if(c->id=="St-49"||c->id=="St-50"||c->id=="St-51") {
+        const wchar_t* attack=c->id=="St-49"?L"A":(c->id=="St-50"?L"C":L"B");
+        details+=L"\n\nPLUG-IN PROGRAMADO: usa ataque ";
+        details+=attack;
+        details+=L" independente do Battle Type adversario.\nDescartado ao fim do turno.\n";
+        details+=L"O simbolo +30/+50 impresso na carta nao esta modelado.";
+    }
+    details+=L"\nSTATUS: "+wide(c->effectStatus)+
+             L"\nFONTE: "+wide(c->source);
+    if(c->effectStatus=="unverified")details+=
+        L"\n\nA carta consta no set, mas o efeito individual ainda nao foi programado.";
+    MessageBoxW(hwnd,details.c_str(),L"Hyper Colosseum - Dados da carta",MB_OK|MB_ICONINFORMATION);
+}
 LRESULT CALLBACK windowProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     switch(msg) {
         case WM_ERASEBKGND:return 1;
+        case WM_RBUTTONUP:showCardInfo(hwnd);return 0;
         case WM_TIMER:
             if(wp==AUTO_TIMER && autoRunning) {
                 static DWORD lastStep=0;
