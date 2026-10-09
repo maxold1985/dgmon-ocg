@@ -325,6 +325,53 @@ bool beginMatch() {
     feedback=L"Partida local iniciada: 30 cartas / jogador. CPU passa nas fases nao implementadas.";
     return true;
 }
+void advanceAutomatic() {
+    if(!autoRunning)return;
+    if(demoOnly) {
+        if(collection.empty()) {
+            autoRunning=false;
+            return;
+        }
+        currentCard=(currentCard+1)%collection.size();
+        ++demoTick;
+        feedback=L"DEMO VISUAL "+std::to_wstring(demoTick)+L": "+
+                 wide(collection[currentCard]->id)+
+                 L" | sem regras suficientes para simular batalhas.";
+        return;
+    }
+    if(!matchStarted) {
+        autoRunning=false;
+        feedback=L"Auto interrompido: partida nao iniciada.";
+        return;
+    }
+    hc::AutoStep step=hc::AutoPlayer::step(engine);
+    if(!step.result.ok) {
+        autoRunning=false;
+        feedback=L"Auto interrompido: "+wide(step.result.message);
+        return;
+    }
+    selectedHand=-1;
+    std::wstring label;
+    switch(step.phaseBefore) {
+        case hc::Phase::Preparation:label=L"PREPARACAO";break;
+        case hc::Phase::Evolution:label=L"EVOLUCAO";break;
+        case hc::Phase::Battle:
+            label=L"BATALHA "+std::to_wstring(engine.lastPower(0))+
+                L" x "+std::to_wstring(engine.lastPower(1));break;
+        case hc::Phase::Points:
+            label=L"PONTOS "+std::to_wstring(engine.getPlayer(0).points)+
+                L" x "+std::to_wstring(engine.getPlayer(1).points);break;
+        default:label=L"FASE";break;
+    }
+    feedback=L"RODADA "+std::to_wstring(engine.round())+L" | "+label;
+    if(step.actor>=0)feedback+=(step.actor==0?L" | VOCE":L" | CPU");
+    if(engine.phase()==hc::Phase::Finished) {
+        autoRunning=false;
+        feedback=L"FIM! "+std::to_wstring(engine.getPlayer(0).points)+
+                 L" x "+std::to_wstring(engine.getPlayer(1).points);
+    }
+}
+
 void gameAction(Action a,int index) {
     if(a==PREVIOUS || a==NEXT) {
         if(collection.empty())return;
