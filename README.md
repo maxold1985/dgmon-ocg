@@ -1,6 +1,6 @@
 # Digimon Hyper Colosseum OCG (1999–2002)
 
-Motor experimental de cartas em C++11 com catálogo offline de 283 registros. Ainda não contém interface DirectX 11.
+Motor experimental Hyper Colosseum em C++11. O CardCatalog carrega apenas IDs Bo-1 a Bo-300 do catálogo offline; não inventa regras individuais. Inclui tabuleiro Win32/GDI+ inspirado no WonderSwan Color (não é DirectX 11).
 
 ## Visual Studio 2022 (MSVC v143)
 
@@ -12,7 +12,7 @@ cd dgmon-ocg
 build_vs2022.bat
 ```
 
-O script gera a solução x64, compila Release, executa CTest e inicia a demonstração. Para Win32:
+O script gera a solução x64, compila Release, executa CTest e abre o tabuleiro gráfico (hc_card_viewer.exe). Para Win32:
 
 ```bat
 build_vs2022.bat Win32
@@ -26,9 +26,25 @@ cmake --build build_vs2022_x64 --config Release
 ctest --test-dir build_vs2022_x64 -C Release --output-on-failure
 ```
 
-Abra `build_vs2022_x64/digimon_hyper_colosseum_2002.sln` no Visual Studio. O projeto inicial é `hc_cards`.
+Abra `build_vs2022_x64/digimon_hyper_colosseum_2002.sln` no Visual Studio. O projeto inicial é `hc_card_viewer` no Windows.
 
 O catálogo comprimido em `data/cards.tar.gz` é extraído para o diretório de build, sem alterar os fontes. Os arquivos `include/`, `src/` e `tests/` permanecem em C++11.
+
+## Tabuleiro gráfico (Windows)
+
+Depois de compilar:
+
+```bat
+build_vs2022_x64\Release\hc_card_viewer.exe
+```
+
+O tabuleiro exibe os campos do adversário e do jogador, Digimon ativo, suporte, requisitos e custo de evolução, medidor de pontos, Net Ocean, Dark Area, mão com até seis cartas e prévia grande da carta selecionada.
+
+**Controles:** setas esquerda/direita navegam o catálogo; clique nas cartas da mão para selecioná-las; N inicia uma nova partida; R repõe a mão; Enter conclui a preparação; Esc fecha a janela. Os botões laterais oferecem Descartar, Planejar evolução, Evoluir, Batalha e Pontos.
+
+Os JPGs são carregados da pasta `data/card_images_original/Bo-1.jpg`, etc., na **raiz do repositório**; há fallback para `data/card_images/` com miniaturas. Os caminhos são definidos na configuração do CMake, portanto não é necessário copiar imagens para Release. Se as imagens ainda não foram baixadas, o tabuleiro mostra o número da carta e "SEM JPG".
+
+O modo prévia exibe cartas do catálogo mesmo sem dados suficientes para jogar. Uma partida só é iniciada quando existirem **10 nomes distintos de Digimon verificados, incluindo um Level III**, permitindo 30 cartas no baralho (3 cópias por nome). O adversário passa nas fases de evolução e preparação; habilidades especiais não verificadas, suportes e Option Cards ainda não são jogáveis. Não é uma emulação exata do WonderSwan.
 
 ## Limitações
 
