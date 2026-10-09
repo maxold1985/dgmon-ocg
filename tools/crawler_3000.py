@@ -23,30 +23,22 @@ FIELDS = ["id", "set", "name_en", "name_jp", "kind", "level",
           "lost_ultimate", "evolution_requirements", "effect_status", "source"]
 
 class Tables(HTMLParser):
-    """Read rows even when MediaWiki wraps tables in other tables."""
+    """Collect leaf table rows, including MediaWiki's nested tables."""
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.tables = []
-        self.table = None
-        self.row = None
-        self.cell = None
         self.depth = 0
-        self.in_cell = 0
+        self.rows = []
+        self.rowstack = []
+        self.cell = None
 
     def handle_starttag(self, tag, attrs):
         if tag == "table":
-            if self.depth == 0:
-                self.table = []
             self.depth += 1
-        elif self.depth > 0 and tag == "tr":
-            if self.row is None:
-                self.row = []
-        elif self.depth > 0 and tag in ("td", "th") and self.row is not None:
-            if self.cell is None:
+        elif tag == "tr" and self.depth:
+            self.rowstack.append((self.depth, []))
+        elif tag in ("th", "td") and self.rowstack:
+            if self.rowstack[-1][0] == self.depth and self.cell is None:
                 self.cell = []
-                self.in_cell = 1
-            else:
-                self.in_cell += 1
         elif tag == "br" and self.cell is not None:
             self.cell.append(" ")
 
@@ -55,23 +47,15 @@ class Tables(HTMLParser):
             self.cell.append(data)
 
     def handle_endtag(self, tag):
-        if tag in ("td", "th") and self.cell is not None and self.row is not None:
-            self.in_cell -= 1
-            if self.in_cell == 0:
-                self.row.append(" ".join("".join(self.cell).split()))
-                self.cell = None
-        elif tag == "tr" and self.row is not None and self.table is not None:
-            if self.cell is not None:
-                self.row.append(" ".join("".join(self.cell).split()))
-                self.cell = None
-            if self.row:
-                self.table.append(self.row)
-            self.row = None
+        if tag in ("th", "td") and self.cell is not None and self.rowstack:
+            self.rowstack[-1][1].append(" ".join("".join(self.cell).split()))
+            self.cell = None
+        elif tag == "tr" and self.rowstack:
+            depth, row = self.rowstack.pop()
+            if row:
+                self.rows.append(row)
         elif tag == "table" and self.depth:
             self.depth -= 1
-            if self.depth == 0 and self.table is not None:
-                self.tables.append(self.table)
-                self.table = None
 
 
 def fetch(url, cache, delay, timeout):
@@ -108,36 +92,24 @@ def parse_set(page, set_name, source):
     parser = Tables()
     parser.feed(page)
     records = {}
-    # Wikimon's Digimon rows have ID, name, frame, level, type,
-    # attribute, field, battle type, and A/B/C power columns.
-    # Its option rows have ID, English name, Japanese name, option type.
-    for table in parser.tables:
-        for row in table:
-            if len(row) < 2:
-                continue
-            number = row[0].strip()
-            if not ID_PATTERN.fullmatch(number):
-                continue
-            # Skip repeated Japanese-language table, retaining English name.
-            if number in records:
-                if len(row) >= 3 and not records[number]["name_jp"]:
-                    if any(ord(ch) > 127 for ch in row[1]):
-                        records[number]["name_jp"] = row[1]
-                continue
-            record = dict.fromkeys(FIELDS, "")
-            record.update(id=number, set=set_name, name_en=row[1],
-                          kind="Unknown", effect_status="unverified", source=source)
-            if len(row) >= 11 and row[7] in ("A", "B", "C"):
-                record["kind"] = "Digimon"
-                record["level"] = row[3] if row[3] in ("III", "IV", "Perfect", "Ultimate") else ""
-                record["battle_type"] = row[7]
-                for index, field in enumerate(("attack_a", "attack_b", "attack_c"), 8):
-                    if row[index].isdigit():
-                        record[field] = row[index]
-            elif len(row) >= 4 and row[3] in ("Item", "Program", "Option"):
-                record["kind"] = "Option"
-                record["name_jp"] = row[2]
-            records[number] = record
+    # Set pages have: Card Number | Card Name | Japanese Name
+    # Option pages additionally have: Type (Item or Program).
+    # Combat statistics belong to individual card pages, not set lists.
+    for row in parser.rows:
+        if len(row) < 3:
+            continue
+        number = row[0].strip()
+        if not ID_PATTERN.fullmatch(number):
+            continue
+        if number in records:
+            continue
+        record = dict.fromkeys(FIELDS, "")
+        record.update(id=number, set=set_name, name_en=row[1],
+                      name_jp=row[2],
+                      kind="Option" if len(row) >= 4 and row[3] in
+                      ("Item", "Program", "Option") else "Digimon",
+                      effect_status="unverified", source=source)
+        records[number] = record
     return records
 
 
