@@ -123,3 +123,35 @@ conteúdo confidencial use criptografia autenticada, como AES-GCM.
 
 O CTest `xor_zip_dat_roundtrip` valida codificação, restauração byte a byte,
 XOR bruto, chave incorreta e rejeição de caminhos idênticos.
+
+
+## Carregar cards.dat diretamente na RAM
+
+O tabuleiro agora suporta `DatArchive`: abre `data/cards.dat`, desfaz XOR na RAM,
+lê `starter_cards.csv` sem arquivo temporário e decodifica as imagens JPG/PNG
+do ZIP para GDI+ por `IStream` em memória.
+
+**Importante:** o leitor atual aceita apenas ZIP com método `ZIP_STORED`
+(sem compressão). ZIP Deflate, ZIP64 e ZIP com senha não são aceitos. Use
+`tools/pack_starter_zip.py` para criar o ZIP compatível.
+
+```powershell
+git pull origin mainn
+.\build_vs2022.bat
+$env:HC_DAT_KEY = "minha-chave"
+.\pack_cards_dat.bat
+.\build_vs2022_x64\Release\hc_card_viewer.exe
+```
+
+Com `data/cards.dat` presente e `HC_DAT_KEY` configurada, o jogo usa
+o DAT e **não consulta os JPGs ou CSV no disco** durante a partida.
+Sem chave ou sem DAT, mantém o carregamento antigo pelo CSV/JPG local.
+
+Também é possível especificar o arquivo e a chave na linha de comando:
+
+```powershell
+.\build_vs2022_x64\Release\hc_card_viewer.exe --dat "C:\jogo\cards.dat" "minha-chave"
+```
+
+O DAT permanece ofuscado no disco, mas o conteúdo é decodificado em RAM;
+XOR com chave repetida não oferece segurança criptográfica.
