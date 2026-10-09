@@ -152,7 +152,9 @@ def main():
         try:
             page = fetch(url, path, args.delay, args.timeout)
             found = parse_set(page, label, url)
-            if not found:\n                print("WARNING: 0 IDs parsed from %s; inspect cached HTML: %s" % (url, path), flush=True)\n            for key, value in found.items():
+            if not found:
+                print("WARNING: 0 IDs parsed from %s; inspect cached HTML: %s" % (url, path), flush=True)
+            for key, value in found.items():
                 records.setdefault(key, value)
             write_csv(records, output)
             print("%-24s %4d in set; %4d unique total" % (label, len(found), len(records)), flush=True)
