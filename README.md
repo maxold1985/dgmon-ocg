@@ -1,55 +1,73 @@
-# Digimon Hyper Colosseum OCG (1999–2002)
+# Digimon Hyper Colosseum — Starter Ver. 1 vs Starter Ver. 2
 
-Motor experimental Hyper Colosseum em C++11. O CardCatalog carrega apenas IDs Bo-1 a Bo-300 do catálogo offline; não inventa regras individuais. Inclui tabuleiro Win32/GDI+ inspirado no WonderSwan Color (não é DirectX 11).
+Simulador experimental em C++11 (Windows 10 / MSVC 2022), com tabuleiro Win32/GDI+, cartas `St` do **Digital Monster Card Game** de 1999 e modo automático.
 
-## Visual Studio 2022 (MSVC v143)
+## Coleções incluídas
 
-Instale **Desktop development with C++**, o toolset **MSVC v143**, Windows SDK e CMake.
+- **Starter Ver. 1:** 60 cartas (St-1 a St-60).
+- **Starter Ver. 2:** 60 cartas (St-61 a St-111 mais nove reimpressões de Starter Ver. 1).
+- **Total:** 111 IDs exclusivos no `data/starter_cards.csv`; 120 entradas de coleção em `data/starter_set_index.csv`.
 
-```bat
-git clone -b mainn https://github.com/maxold1985/dgmon-ocg.git
-cd dgmon-ocg
-build_vs2022.bat
+Os nomes, Battle Type, níveis e ataques A/B/C foram transcritos das tabelas dos dois starters da Wikimon. Os campos de Lost Points e requisitos/evoluções são preenchidos **somente para as cartas consultadas individualmente**. As demais cartas têm `effect_status=unverified` e não podem ser jogadas enquanto faltarem regras verificadas.
+
+Fontes: https://wikimon.net/Starter_Ver._1 e https://wikimon.net/Starter_Ver._2 .
+
+## Compilar e abrir
+
+Instale Visual Studio 2022, MSVC v143, Windows SDK e CMake.
+
+```powershell
+git pull origin mainn
+.\build_vs2022.bat
 ```
 
-O script gera a solução x64, compila Release, executa CTest e abre o tabuleiro gráfico (hc_card_viewer.exe). Para Win32:
+O script compila, executa CTest e abre `build_vs2022_x64\Release\hc_card_viewer.exe`. No Visual Studio, o projeto inicial é `hc_card_viewer`.
 
-```bat
-build_vs2022.bat Win32
+## Imagens originais das cartas
+
+As imagens não são incluídas no repositório. Para baixá-las da Wikimon, com requisições sequenciais, cache, intervalo mínimo de 4 segundos, e retomada:
+
+```powershell
+.\download_starter_images.bat --limit 10
+.\download_starter_images.bat
 ```
 
-Comandos manuais:
+O script consulta as páginas oficiais dos dois starters e extrai os arquivos originais das galerias (sem miniaturas 60px). Os JPGs ficam em `data\card_images_original\St-1.jpg`, etc. Se a carta já existir, o download é ignorado. O tabuleiro também tenta encontrar miniaturas locais em `data\card_images` como último recurso.
 
-```bat
-cmake -S . -B build_vs2022_x64 -G "Visual Studio 17 2022" -A x64 -T v143
-cmake --build build_vs2022_x64 --config Release
+Antes de redistribuir imagens, confira a licença específica de cada arquivo na Wikimon.
+
+## Jogo automático e tabuleiro
+
+- **ST1 (embaixo):** jogador automático ou manual, inicia com St-1 Agumon.
+- **ST2 (em cima):** adversário automático, inicia com St-62 Gottsumon.
+- Cada lado recebe um baralho experimental de **30 cartas** construído com nove Digimon de nomes distintos (3 cópias cada) e três cópias do item St-49.
+- O tabuleiro exibe cartas ativas, mão, deck/Net Ocean, Dark Area, pontos, fases, imagens, nomes e ataques.
+- O motor executa as fases Preparação, Evolução, Batalha e Pontos; não gera ataques aleatórios nem resultados inventados.
+- **A ou Espaço:** automático/pausar; **+/-:** velocidade; **N:** nova partida manual; **setas:** navegar no catálogo; **clique direito:** detalhes da carta, Lost Points, evolução e fonte; **Esc:** sair.
+- Na Batalha manual, selecione um item na mão e clique **USAR ITEM**. O adversário só toma decisões automaticamente quando o modo Auto está ativo.
+
+A automação inicia ao abrir a janela. Se os decks não puderem ser formados com regras verificadas, o tabuleiro indica explicitamente que está em modo visual (sem simular combate).
+
+### Regras implementadas nesta etapa
+
+- Níveis III / IV, poderes A/B/C e Lost Points das cartas previamente verificadas.
+- Evolução St-2 (Greymon) a partir de Agumon com custo **OO** (duas cartas do Net Ocean), conforme a página de St-2.
+- Plug-In **St-49**: seleciona ataque A; **St-50**: seleciona ataque C; **St-51**: seleciona ataque B, independentemente do Battle Type adversário; o item vai para Dark Area ao final do turno.
+- Ataque C de guarda cancela o ataque A quando a carta possui `cancel_target=A`.
+- Regras genéricas do motor para decks de 30 cartas, máximo de três cópias por nome, evolução básica, seleção de batalha e pontos.
+
+**Ainda não implementado:** os símbolos +30/+50 exibidos nos Plug-Ins, habilidades passivas especiais de campo, todas as cartas Program, Winning Percentage, Jogress, habilidades específicas e condições de evolução de outras cartas, regras completas de Option Cards, IA estratégica. Um cartão com `unverified` fica visível no catálogo mas não entra na partida.
+
+Os CSVs originais de crawler e `data/cards.tar.gz` foram mantidos no projeto.
+
+## Console e testes
+
+```powershell
+.\build_vs2022_x64\Release\hc_cards.exe data\starter_cards.csv --card St-2
+.\build_vs2022_x64\Release\hc_cards.exe data\starter_cards.csv --starter 1
+.\build_vs2022_x64\Release\hc_cards.exe data\starter_cards.csv --starter 2
+.\build_vs2022_x64\Release\hc_cards.exe data\starter_cards.csv --demo
 ctest --test-dir build_vs2022_x64 -C Release --output-on-failure
 ```
 
-Abra `build_vs2022_x64/digimon_hyper_colosseum_2002.sln` no Visual Studio. O projeto inicial é `hc_card_viewer` no Windows.
-
-O catálogo comprimido em `data/cards.tar.gz` é extraído para o diretório de build, sem alterar os fontes. Os arquivos `include/`, `src/` e `tests/` permanecem em C++11.
-
-## Tabuleiro gráfico (Windows)
-
-Depois de compilar:
-
-```bat
-build_vs2022_x64\Release\hc_card_viewer.exe
-```
-
-O tabuleiro exibe os campos do adversário e do jogador, Digimon ativo, suporte, requisitos e custo de evolução, medidor de pontos, Net Ocean, Dark Area, mão com até seis cartas e prévia grande da carta selecionada.
-
-**Controles:** o modo AUTO inicia ao abrir a janela. A (ou Espaço) pausa/retoma; +/- muda a velocidade (0,55 / 1,1 / 2,2 segundos por passo). N inicia uma partida manual nova; setas esquerda/direita navegam o catálogo; clique na mão para selecionar cartas; R repõe a mão; Enter conclui a preparação; Esc fecha a janela. Os botões laterais oferecem Nova, Auto, velocidade, Descartar, Planejar evolução, Evoluir, Batalha e Pontos.
-
-Os JPGs são carregados da pasta `data/card_images_original/Bo-1.jpg`, etc., na **raiz do repositório**; há fallback para `data/card_images/` com miniaturas. Os caminhos são definidos na configuração do CMake, portanto não é necessário copiar imagens para Release. Se as imagens ainda não foram baixadas, o tabuleiro mostra o número da carta e "SEM JPG".
-
-**Jogo automático:** o controlador em `src/auto_player.cpp` avança cada fase em um temporizador Win32: repõe cartas, tenta uma evolução válida, conclui a preparação de ambos os jogadores, evolui, resolve a batalha e os pontos; a partida encerra segundo o motor. Se não houver cartas Bo suficientes com regras verificadas para construir dois decks de 30, ativa **DEMO VISUAL**: percorre as imagens das cartas automaticamente, sem atribuir vitórias, ataques ou pontos fictícios. O status e cabeçalho identificam explicitamente o modo.
-
-O modo prévia exibe cartas do catálogo mesmo sem dados suficientes para jogar. Uma partida só é iniciada quando existirem **10 nomes distintos de Digimon verificados, incluindo um Level III**, permitindo 30 cartas no baralho (3 cópias por nome). O adversário passa nas fases de evolução e preparação; habilidades especiais não verificadas, suportes e Option Cards ainda não são jogáveis. Não é uma emulação exata do WonderSwan.
-
-## Limitações
-
-O motor implementa preparação, evolução básica, batalha e pontos, mas ainda não cobre todos os efeitos oficiais, Option Cards, Jogress ou o renderizador DX11. Alguns registros do catálogo não são utilizáveis em batalhas. O script legado `sync_1999_2002.bat` depende de um importador ainda não publicado e não é necessário para o build offline.
-
-**Nota:** a configuração MSVC 2022 foi publicada; o build ainda não foi validado em um computador Windows com Visual Studio 2022.
+O CTest inclui validações de inventário, construção dos dois decks, partida automática e efeitos de troca de ataque. A compilação do MSVC precisa ser confirmada no computador Windows.
