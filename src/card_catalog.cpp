@@ -82,8 +82,19 @@ Result CardCatalog::loadCSV(const std::string& filename) {
     if(!line.empty()&&line[line.size()-1]=='\r')line.resize(line.size()-1);
     const std::vector<std::string> header=splitCSV(line);
     const std::string required[]={"id","set","name_en","name_jp","kind","level","battle_type","attack_a","attack_b","attack_c","cancel_target","lost_iii","lost_iv","lost_perfect","lost_ultimate","evolution_requirements","effect_status","source"};
-    if(header.size()!=18)return {false,"Wrong CSV header width"};
+    // Support both the original 18-column CSV and enriched 33-column database.
+    if(header.size()!=18&&header.size()!=33)return {false,"Wrong CSV header width"};
     for(int j=0;j<18;++j)if(header[j]!=required[j])return {false,"Wrong CSV header: "+header[j]};
+    if(header.size()==33) {
+        const std::string metadata[]={
+            "digimon_type","attribute","field_code","frame","option_type",
+            "attack_a_name","attack_b_name","attack_c_name","special_ability",
+            "printed_bonus","image_file","source_set","details_source",
+            "verification_level","notes"
+        };
+        for(int j=0;j<15;++j)
+            if(header[18+j]!=metadata[j])return {false,"Wrong metadata header: "+header[18+j]};
+    }
     std::map<std::string,CatalogCard> incoming;
     int rowNum=1;
     while(std::getline(f,line)) {
@@ -91,13 +102,22 @@ Result CardCatalog::loadCSV(const std::string& filename) {
         if(!line.empty()&&line[line.size()-1]=='\r')line.resize(line.size()-1);
         if(line.empty())continue;
         const std::vector<std::string> r=splitCSV(line);
-        if(r.size()!=18){std::ostringstream o;o<<"Bad CSV row "<<rowNum;return {false,o.str()};}
+        if(r.size()!=header.size()){std::ostringstream o;o<<"Bad CSV row "<<rowNum;return {false,o.str()};}
         CatalogCard c;
         c.id=r[0];c.set=r[1];c.name=r[2];c.japanese=r[3];c.kind=r[4];c.level=r[5];c.battleType=r[6];
         for(int j=0;j<3;++j)c.power[j]=positive(r[7+j]);
         c.cancelTarget=r[10];
         for(int j=0;j<4;++j)c.lost[j]=positive(r[11+j]);
         c.evolutionRequirements=r[15];c.effectStatus=r[16];c.source=r[17];
+        if(header.size()==33) {
+            c.digimonType=r[18];c.attribute=r[19];c.fieldCode=r[20];
+            c.frame=r[21];c.optionType=r[22];
+            for(int j=0;j<3;++j)c.attackNames[j]=r[23+j];
+            c.specialAbility=r[26];
+            c.printedBonus=positive(r[27]);
+            c.imageFile=r[28];c.sourceSet=r[29];c.detailsSource=r[30];
+            c.verificationLevel=r[31];c.notes=r[32];
+        }
         c.combatVerified=(parseLevel(c.level)!=0&&parseAttack(c.battleType)>=0);
         for(int j=0;j<3;++j)c.combatVerified=c.combatVerified&&(c.power[j]>=0);
         for(int j=0;j<4;++j)c.combatVerified=c.combatVerified&&(c.lost[j]>=0);
