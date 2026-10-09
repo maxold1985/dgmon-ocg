@@ -24,6 +24,7 @@ struct CatalogCard {
 class CardCatalog {
 public:
     Result loadCSV(const std::string& filename);
+    Result loadCSVText(const std::string& text);
     const CatalogCard* find(const std::string& cardNumber) const;
     std::vector<const CatalogCard*> bySet(const std::string& setName) const;
     std::vector<const CatalogCard*> byName(const std::string& text) const;
