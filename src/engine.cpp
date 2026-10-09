@@ -31,6 +31,17 @@ Result Engine::planEvolution(int p,int id){
  for(int i=0;i<cost;++i){s.evolutionCost.push_back(s.deck.back());s.deck.pop_back();}
  return {true,"Evolution prepared; costs reserved face down"};
 }
+Result Engine::playBattleOption(int p,int id) {
+ if(!valid(p)||phase_!=Phase::Battle)return {false,"Option requires Battle phase"};
+ Player& state=players_[p];
+ const Card* option=find(id);
+ if(!option||option->kind!=Kind::Option||option->optionAttackOverride<0
+    ||option->optionAttackOverride>2)return {false,"Unsupported option card"};
+ if(!state.options.empty())return {false,"Already used one option this battle"};
+ if(!remove(state.hand,id))return {false,"Option not in hand"};
+ state.options.push_back(id);
+ return {true,"Battle option activated"};
+}
 Result Engine::commitPreparation(int p){
  if(!valid(p)||phase_!=Phase::Preparation||p!=(players_[first_].prepared?1-first_:first_)||players_[p].prepared)return {false,"Wrong preparation order"};
  if(players_[p].hand.size()>6)return {false,"Hand exceeds six cards"};
@@ -47,8 +58,19 @@ Result Engine::evolve(int p,bool accept){
 Result Engine::resolveBattle(){
  if(phase_!=Phase::Battle)return {false,"Wrong phase"};const Card* c[2]={find(players_[0].active),find(players_[1].active)};
  if(!c[0]||!c[1]||c[0]->hasUnimplementedEffect||c[1]->hasUnimplementedEffect)return {false,"Missing card or unimplemented card effect"};
- for(int p=0;p<2;++p){int attack=(int)c[1-p]->battleType;lastPower_[p]=c[p]->power[attack];}
- for(int p=0;p<2;++p){int attack=(int)c[1-p]->battleType;if(attack==2&&c[p]->cancelAttack==(int)c[p]->battleType)lastPower_[1-p]=0;}
+ int attack[2]={(int)c[1]->battleType,(int)c[0]->battleType};
+ for(int p=0;p<2;++p) {
+   if(!players_[p].options.empty()) {
+     const Card* option=find(players_[p].options[0]);
+     if(!option||option->kind!=Kind::Option||option->optionAttackOverride<0
+        ||option->optionAttackOverride>2)return {false,"Invalid battle option"};
+     attack[p]=option->optionAttackOverride;
+   }
+   lastPower_[p]=c[p]->power[attack[p]];
+ }
+ // A verified C Guard (A->0) cancels the opponent's selected A attack.
+ for(int p=0;p<2;++p)
+   if(attack[p]==2 && c[p]->cancelAttack==attack[1-p])lastPower_[1-p]=0;
  winner_=lastPower_[0]==lastPower_[1]?-1:(lastPower_[0]>lastPower_[1]?0:1);phase_=Phase::Points;
  return {true,"Battle resolved"};
 }
