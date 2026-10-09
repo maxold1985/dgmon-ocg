@@ -60,5 +60,5 @@ To fetch existing original card images with deliberate pacing, run
 `download_starter_images.bat`. Image bytes are not included here.
 
 Wikimon text/metadata is attributed to Wikimon and its contributors;
-consult the site's current [copyright and licensing](https://wikimon.net/Wikimon:Copyrights)
-information before redistribution, and review each image's own licensing.
+consult [Wikimon's general disclaimer](https://wikimon.net/Wikimon:General_disclaimer)
+and its current site terms before redistribution, and review each image's own licensing.
