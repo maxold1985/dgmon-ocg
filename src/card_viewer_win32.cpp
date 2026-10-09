@@ -268,7 +268,15 @@ void drawSidebar(Graphics& g) {
     button(g,PLAN,L"PLANEJAR EVO",949,603,146,36,canPrepare()&&selectedHand>=0);
     button(g,PREPARE,L"PREPARAR",1107,603,147,36,canPrepare());
     button(g,EVOLVE,L"EVOLUIR",949,645,146,36,canAct(hc::Phase::Evolution));
-    button(g,BATTLE,L"BATALHA",1107,645,147,36,canAct(hc::Phase::Battle));
+    bool optionSelected=false;
+    if(matchStarted&&selectedHand>=0 &&
+       (size_t)selectedHand<engine.getPlayer(0).hand.size()) {
+        const hc::CatalogCard* chosen=cardFromInternal(
+            engine.getPlayer(0).hand[(size_t)selectedHand]);
+        optionSelected=chosen&&chosen->kind=="Option";
+    }
+    button(g,BATTLE,optionSelected?L"USAR ITEM":L"BATALHA",
+           1107,645,147,36,canAct(hc::Phase::Battle));
     button(g,POINTS,L"PONTOS",949,687,146,36,canAct(hc::Phase::Points));
     button(g,PREVIOUS,L"< ANTERIOR",1107,687,70,36,!collection.empty());
     button(g,NEXT,L">",1183,687,71,36,!collection.empty());
@@ -447,13 +455,23 @@ void gameAction(Action a,int index) {
             if(r.ok && first==0)r=engine.evolve(1);
             break;
         }
-        case BATTLE:r=engine.resolveBattle();break;
+        case BATTLE: {
+            const std::vector<int>& hand=engine.getPlayer(0).hand;
+            const hc::CatalogCard* chosen=
+                selectedHand>=0&&(size_t)selectedHand<hand.size()?
+                cardFromInternal(hand[(size_t)selectedHand]):0;
+            if(chosen&&chosen->kind=="Option") {
+                r=engine.playBattleOption(0,hand[(size_t)selectedHand]);
+                if(r.ok)selectedHand=-1;
+            } else r=engine.resolveBattle();
+            break;
+        }
         case POINTS:r=engine.resolvePoints();selectedHand=-1;break;
         default:return;
     }
     feedback=wide(r.message);
     if(!r.ok)feedback=L"ACAO NEGADA: "+feedback;
-    else if(a==BATTLE) {
+    else if(a==BATTLE && r.message=="Battle resolved") {
         feedback+=L"  VOCE "+std::to_wstring(engine.lastPower(0))+
                   L" x "+std::to_wstring(engine.lastPower(1))+L" CPU";
     }
