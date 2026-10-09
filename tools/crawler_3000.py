@@ -23,6 +23,7 @@ FIELDS = ["id", "set", "name_en", "name_jp", "kind", "level",
           "lost_ultimate", "evolution_requirements", "effect_status", "source"]
 
 class Tables(HTMLParser):
+    """Read rows even when MediaWiki wraps tables in other tables."""
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.tables = []
@@ -30,16 +31,22 @@ class Tables(HTMLParser):
         self.row = None
         self.cell = None
         self.depth = 0
+        self.in_cell = 0
 
     def handle_starttag(self, tag, attrs):
         if tag == "table":
             if self.depth == 0:
                 self.table = []
             self.depth += 1
-        elif self.depth == 1 and tag == "tr":
-            self.row = []
-        elif self.depth == 1 and tag in ("td", "th") and self.row is not None:
-            self.cell = []
+        elif self.depth > 0 and tag == "tr":
+            if self.row is None:
+                self.row = []
+        elif self.depth > 0 and tag in ("td", "th") and self.row is not None:
+            if self.cell is None:
+                self.cell = []
+                self.in_cell = 1
+            else:
+                self.in_cell += 1
         elif tag == "br" and self.cell is not None:
             self.cell.append(" ")
 
@@ -49,9 +56,14 @@ class Tables(HTMLParser):
 
     def handle_endtag(self, tag):
         if tag in ("td", "th") and self.cell is not None and self.row is not None:
-            self.row.append(" ".join("".join(self.cell).split()))
-            self.cell = None
+            self.in_cell -= 1
+            if self.in_cell == 0:
+                self.row.append(" ".join("".join(self.cell).split()))
+                self.cell = None
         elif tag == "tr" and self.row is not None and self.table is not None:
+            if self.cell is not None:
+                self.row.append(" ".join("".join(self.cell).split()))
+                self.cell = None
             if self.row:
                 self.table.append(self.row)
             self.row = None
@@ -60,6 +72,7 @@ class Tables(HTMLParser):
             if self.depth == 0 and self.table is not None:
                 self.tables.append(self.table)
                 self.table = None
+
 
 def fetch(url, cache, delay, timeout):
     cache.parent.mkdir(parents=True, exist_ok=True)
@@ -95,32 +108,38 @@ def parse_set(page, set_name, source):
     parser = Tables()
     parser.feed(page)
     records = {}
+    # Wikimon's Digimon rows have ID, name, frame, level, type,
+    # attribute, field, battle type, and A/B/C power columns.
+    # Its option rows have ID, English name, Japanese name, option type.
     for table in parser.tables:
-        headers = []
         for row in table:
-            if not row:
+            if len(row) < 2:
                 continue
             number = row[0].strip()
             if not ID_PATTERN.fullmatch(number):
-                # Different tables may have different column headers.
-                headers = [x.lower().strip().replace(" ", "") for x in row]
                 continue
-            if len(row) < 2:
+            # Skip repeated Japanese-language table, retaining English name.
+            if number in records:
+                if len(row) >= 3 and not records[number]["name_jp"]:
+                    if any(ord(ch) > 127 for ch in row[1]):
+                        records[number]["name_jp"] = row[1]
                 continue
             record = dict.fromkeys(FIELDS, "")
             record.update(id=number, set=set_name, name_en=row[1],
-                          effect_status="unverified", source=source)
-            # Never infer battle stats from positional columns: they vary by set.
-            if "japanesename" in headers:
-                index = headers.index("japanesename")
-                if index < len(row):
-                    record["name_jp"] = row[index]
-            if "type" in headers and any(x in set_name.lower() for x in ("option",)):
+                          kind="Unknown", effect_status="unverified", source=source)
+            if len(row) >= 11 and row[7] in ("A", "B", "C"):
+                record["kind"] = "Digimon"
+                record["level"] = row[3] if row[3] in ("III", "IV", "Perfect", "Ultimate") else ""
+                record["battle_type"] = row[7]
+                for index, field in enumerate(("attack_a", "attack_b", "attack_c"), 8):
+                    if row[index].isdigit():
+                        record[field] = row[index]
+            elif len(row) >= 4 and row[3] in ("Item", "Program", "Option"):
                 record["kind"] = "Option"
-            else:
-                record["kind"] = "Unknown"
+                record["name_jp"] = row[2]
             records[number] = record
     return records
+
 
 def write_csv(records, output):
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -161,7 +180,7 @@ def main():
         try:
             page = fetch(url, path, args.delay, args.timeout)
             found = parse_set(page, label, url)
-            for key, value in found.items():
+            if not found:\n                print("WARNING: 0 IDs parsed from %s; inspect cached HTML: %s" % (url, path), flush=True)\n            for key, value in found.items():
                 records.setdefault(key, value)
             write_csv(records, output)
             print("%-24s %4d in set; %4d unique total" % (label, len(found), len(records)), flush=True)
