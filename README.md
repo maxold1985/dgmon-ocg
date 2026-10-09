@@ -8,9 +8,28 @@ Simulador experimental em C++11 (Windows 10 / MSVC 2022), com tabuleiro Win32/GD
 - **Starter Ver. 2:** 60 cartas (St-61 a St-111 mais nove reimpressões de Starter Ver. 1).
 - **Total:** 111 IDs exclusivos no `data/starter_cards.csv`; 120 entradas de coleção em `data/starter_set_index.csv`.
 
-Os nomes, Battle Type, níveis e ataques A/B/C foram transcritos das tabelas dos dois starters da Wikimon. Os campos de Lost Points e requisitos/evoluções são preenchidos **somente para as cartas consultadas individualmente**. As demais cartas têm `effect_status=unverified` e não podem ser jogadas enquanto faltarem regras verificadas.
+O banco principal `data/starter_cards.csv` agora possui **33 campos por carta**. Ele contém nomes ingleses e japoneses, categoria, espécie, atributo, campo, frame, Battle Type, ataques A/B/C, nomes de ataques revisados, classe Item/Program, valor impresso quando documentado, referência de imagem local e nível de verificação. O mesmo banco está disponível como `data/starter_cards.json`.
+
+As páginas de coleção foram usadas para conferir os 111 IDs. **19 fichas individuais** foram consultadas para coletar propriedades adicionais; isso não significa que os 111 efeitos tenham sido implementados. As demais cartas preservam `verification_level=set_list_only`. Lost Points e requisitos de evolução ficam vazios onde ainda não foram verificados. Habilidades como `sky`, `underwater` e `underground` podem constar da ficha, mas ainda não estão implementadas no motor.
 
 Fontes: https://wikimon.net/Starter_Ver._1 e https://wikimon.net/Starter_Ver._2 .
+
+## Atualizar e conferir o banco de dados
+
+O programa offline abaixo sincroniza os 111 registros com os metadados revisados, valida a composição das duas coleções e exporta o JSON. Não faz novas requisições à Wikimon.
+
+```powershell
+git pull origin mainn
+.\update_starter_database.bat
+```
+
+Para somente verificar, sem modificar arquivos:
+
+```powershell
+py -3 tools\update_starter_database.py
+```
+
+Detalhes da estrutura e ressalvas de fonte: `data/README.md`. Há uma divergência documentada no tipo da carta St-64 entre as tabelas em inglês e as páginas japonesas/individual; o banco segue a página individual (`Machine`).
 
 ## Compilar e abrir
 
