@@ -13,9 +13,11 @@ struct Card {
  Attack battleType; int power[3];
  int cancelAttack; int lostPoints[4];
  std::vector<int> evolvesFrom; int regularCost; int irregularCost;
+ int optionAttackOverride; // -1 unless a verified A/B/C Plug-In
  bool requiresSpecialEvolution; bool hasUnimplementedEffect;
  Card() : id(0), kind(Kind::Digimon), level(Level::III),
    battleType(Attack::A), cancelAttack(-1), regularCost(0), irregularCost(0),
+   optionAttackOverride(-1),
    requiresSpecialEvolution(false), hasUnimplementedEffect(false) {
      for(int i=0;i<3;++i)power[i]=0;
      lostPoints[0]=10;lostPoints[1]=20;lostPoints[2]=30;lostPoints[3]=40;
@@ -40,6 +42,7 @@ public:
  Result discardFromHand(int p,int cardId);
  Result replenish(int p);
  Result planEvolution(int p,int cardId);
+ Result playBattleOption(int p,int cardId);
  Result commitPreparation(int p);
  Result evolve(int p,bool accept=true);
  Result resolveBattle();
