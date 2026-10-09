@@ -1,4 +1,7 @@
 #include "auto_player.h"
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <cassert>
 #include <iostream>
 #include <string>
