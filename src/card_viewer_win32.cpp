@@ -1,6 +1,9 @@
 #ifdef _WIN32
 #include "card_catalog.h"
 #include "card_viewer_paths.h"
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <windowsx.h>
 #include <gdiplus.h>
@@ -20,7 +23,7 @@ const int W=1280;
 const int H=840;
 enum Action {
     NEW_GAME=1, REFILL, DISCARD, PLAN, PREPARE, EVOLVE, BATTLE, POINTS,
-    PREVIOUS, NEXT, CHOOSE_HAND
+    PREVIOUS, NEXT, CHOOSE_HAND, CHOOSE_PREVIEW
 };
 struct Hotspot {
     RectF rect;
@@ -191,7 +194,7 @@ void drawField(Graphics& g) {
     if(enemyCards>6)enemyCards=6;
     for(int i=0;i<enemyCards;++i)cardBack(g,250+i*52,130,45,65);
     caption(g,L"DIGIMON",481,98,15,rgb(247,227,190),true);
-    cardBox(g,cardFromInternal(matchStarted?engine.getPlayer(1).active:-1),482,119,122,174);
+    cardBox(g,matchStarted?cardFromInternal(engine.getPlayer(1).active):(collection.size()>1?collection[1]:0),482,119,122,174);
     caption(g,L"SUPORTE",627,121,14,rgb(216,231,231));
     cardBox(g,0,625,149,94,125);
     caption(g,L"NET OCEAN",782,110,14,rgb(216,231,231));
@@ -201,7 +204,7 @@ void drawField(Graphics& g) {
     fill(g,240,331,675,12,rgb(236,187,95));
     caption(g,L"BATTLE   <  VS  >",480,330,14,rgb(20,29,42),true);
     caption(g,L"DIGIMON",481,372,15,rgb(201,239,234),true);
-    cardBox(g,cardFromInternal(matchStarted?engine.getPlayer(0).active:-1),482,397,122,174);
+    cardBox(g,matchStarted?cardFromInternal(engine.getPlayer(0).active):(collection.empty()?0:collection[currentCard]),482,397,122,174);
     caption(g,L"SUPORTE",626,388,14,rgb(216,231,231));
     cardBox(g,0,625,412,94,131);
     caption(g,L"NET OCEAN",782,388,14,rgb(216,231,231));
@@ -217,8 +220,14 @@ void drawField(Graphics& g) {
             cardBox(g,c,x,614,93,115,selectedHand==(int)i);
             registerHit(CHOOSE_HAND,(int)i,x,614,93,115);
         }
-    } else {
-        caption(g,L"Pressione NOVA PARTIDA para distribuir 6 cartas.",251,656,16,rgb(204,227,227));
+    } else if(!collection.empty()) {
+        for(size_t i=0;i<6 && i<collection.size();++i) {
+            const size_t index=(currentCard+i)%collection.size();
+            REAL x=253+(REAL)i*106;
+            cardBox(g,collection[index],x,614,93,115,i==0);
+            registerHit(CHOOSE_PREVIEW,(int)index,x,614,93,115);
+        }
+        caption(g,L"MODO PREVIA - cartas do catalogo (sem partida)",252,732,12,rgb(252,201,120));
     }
 }
 void drawSidebar(Graphics& g) {
@@ -308,6 +317,12 @@ void gameAction(Action a,int index) {
         if(collection.empty())return;
         currentCard=(currentCard+collection.size()+(a==NEXT?1:collection.size()-1))%collection.size();
         selectedHand=-1;
+        return;
+    }
+    if(a==CHOOSE_PREVIEW) {
+        if(index>=0 && (size_t)index<collection.size())currentCard=(size_t)index;
+        selectedHand=-1;
+        feedback=L"Visualizacao de carta Bo. Pressione N para tentar iniciar a partida.";
         return;
     }
     if(a==CHOOSE_HAND) {
