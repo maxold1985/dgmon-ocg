@@ -2,6 +2,7 @@
 #include "card_catalog.h"
 #include "auto_player.h"
 #include "starter_decks.h"
+#include "dat_archive.h"
 #include "card_viewer_paths.h"
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -11,6 +12,7 @@
 #include <gdiplus.h>
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <deque>
 #include <map>
 #include <memory>
@@ -33,6 +35,8 @@ struct Hotspot {
     int index;
 };
 hc::CardCatalog catalog;
+hc::DatArchive datArchive;
+bool useDatArchive=false;
 std::vector<const hc::CatalogCard*> collection;
 std::unique_ptr<hc::EngineCardBridge> bridge;
 hc::Engine engine(2026);
@@ -98,6 +102,49 @@ std::shared_ptr<Image> imageFor(const std::string& id) {
     std::map<std::string,std::shared_ptr<Image> >::iterator found=textures.find(id);
     if(found!=textures.end())return found->second;
     if(missingImages.count(id))return std::shared_ptr<Image>();
+    if(useDatArchive) {
+        const char* extensions[]={".jpg",".jpeg",".png"};
+        const char* folders[]={"card_images_original/","card_images/",""};
+        for(size_t d=0;d<3;++d)for(size_t e=0;e<3;++e) {
+            const std::string entry=std::string(folders[d])+id+extensions[e];
+            std::vector<unsigned char> bytes;
+            if(!datArchive.readFile(entry,bytes)||bytes.empty())continue;
+            HGLOBAL memory=GlobalAlloc(GMEM_MOVEABLE,bytes.size());
+            if(!memory)continue;
+            void* pointer=GlobalLock(memory);
+            if(!pointer){GlobalFree(memory);continue;}
+            memcpy(pointer,&bytes[0],bytes.size());
+            GlobalUnlock(memory);
+            IStream* stream=0;
+            if(FAILED(CreateStreamOnHGlobal(memory,TRUE,&stream))) {
+                GlobalFree(memory);continue;
+            }
+            std::unique_ptr<Image> source(Image::FromStream(stream,FALSE));
+            if(source&&source->GetLastStatus()==Ok&&source->GetWidth()&&source->GetHeight()) {
+                std::shared_ptr<Bitmap> bitmap(new Bitmap(
+                    source->GetWidth(),source->GetHeight(),PixelFormat32bppARGB));
+                if(bitmap->GetLastStatus()==Ok) {
+                    Graphics canvas(bitmap.get());
+                    if(canvas.DrawImage(source.get(),0,0,
+                        source->GetWidth(),source->GetHeight())==Ok) {
+                        textures[id]=bitmap;
+                        textureOrder.push_back(id);
+                        while(textureOrder.size()>20) {
+                            textures.erase(textureOrder.front());
+                            textureOrder.pop_front();
+                        }
+                        source.reset();
+                        stream->Release();
+                        return bitmap;
+                    }
+                }
+            }
+            source.reset();
+            stream->Release();
+        }
+        missingImages.insert(id);
+        return std::shared_ptr<Image>();
+    }
     const std::string base=std::string(HC_SOURCE_ROOT)+"/data/";
     const char* dirs[]={"card_images_original/","card_images/"};
     const char* exts[]={".jpg",".jpeg",".png"};
@@ -607,7 +654,49 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,LPWSTR,int show) {
     GdiplusStartupInput gdiplusInput;
     ULONG_PTR gdiplusToken=0;
     if(GdiplusStartup(&gdiplusToken,&gdiplusInput,0)!=Ok)return 1;
-    hc::Result load=catalog.loadCSV(HC_CARDS_CSV);
+    hc::Result load={false,"No catalog loaded"};
+    // Explicit command line: hc_card_viewer.exe --dat <cards.dat> <xor-key>
+    // Default: source-root/data/cards.dat, with HC_DAT_KEY environment variable.
+    std::wstring datPath;
+    std::string datKey;
+    int argc=0;
+    LPWSTR* argv=CommandLineToArgvW(GetCommandLineW(),&argc);
+    if(argv&&argc>=4&&wcscmp(argv[1],L"--dat")==0) {
+        datPath=argv[2];
+        int len=WideCharToMultiByte(CP_UTF8,0,argv[3],-1,0,0,0,0);
+        if(len>1) {
+            std::vector<char> keyBytes((size_t)len);
+            WideCharToMultiByte(CP_UTF8,0,argv[3],-1,&keyBytes[0],len,0,0);
+            datKey.assign(&keyBytes[0]);
+        }
+    } else {
+        datPath=wide(std::string(HC_SOURCE_ROOT)+"/data/cards.dat");
+        char key[4096]={};
+        const DWORD n=GetEnvironmentVariableA("HC_DAT_KEY",key,sizeof(key));
+        if(n>0&&n<sizeof(key))datKey.assign(key);
+    }
+    if(argv)LocalFree(argv);
+    if(!datKey.empty()&&fileExists(datPath)) {
+        int len=WideCharToMultiByte(CP_UTF8,0,datPath.c_str(),-1,0,0,0,0);
+        std::vector<char> pathBytes((size_t)len);
+        WideCharToMultiByte(CP_UTF8,0,datPath.c_str(),-1,&pathBytes[0],len,0,0);
+        std::string err;
+        if(datArchive.open(&pathBytes[0],datKey,&err)) {
+            std::string csv;
+            if(datArchive.readText("starter_cards.csv",csv) ||
+               datArchive.readText("data/starter_cards.csv",csv)) {
+                load=catalog.loadCSVText(csv);
+                if(load.ok)useDatArchive=true;
+            } else load={false,"DAT missing starter_cards.csv"};
+        } else load={false,err};
+        if(!load.ok) {
+            MessageBoxW(0,wide(load.message).c_str(),L"Erro ao carregar cards.dat",MB_OK|MB_ICONERROR);
+            GdiplusShutdown(gdiplusToken);
+            return 2;
+        }
+    } else {
+        load=catalog.loadCSV(HC_CARDS_CSV);
+    }
     if(!load.ok) {
         MessageBoxW(0,wide(load.message).c_str(),L"Falha ao carregar catalogo",MB_OK|MB_ICONERROR);
         GdiplusShutdown(gdiplusToken);
