@@ -9,6 +9,8 @@
 #endif
 #include <windows.h>
 #include <windowsx.h>
+#include <shellapi.h>
+#include <objidl.h>
 #include <gdiplus.h>
 #include <algorithm>
 #include <cstdlib>
