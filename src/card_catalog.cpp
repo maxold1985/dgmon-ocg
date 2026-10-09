@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 namespace hc {
 namespace {
@@ -77,6 +78,11 @@ bool CatalogCard::isPlayableCore() const {
 Result CardCatalog::loadCSV(const std::string& filename) {
     std::ifstream f(filename.c_str(), std::ios::binary);
     if(!f)return {false,"Cannot open CSV: "+filename};
+    std::string text((std::istreambuf_iterator<char>(f)),std::istreambuf_iterator<char>());
+    return loadCSVText(text);
+}
+Result CardCatalog::loadCSVText(const std::string& text) {
+    std::istringstream f(text);
     std::string line;
     if(!std::getline(f,line))return {false,"Empty CSV"};
     if(!line.empty()&&line[line.size()-1]=='\r')line.resize(line.size()-1);
