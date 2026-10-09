@@ -103,6 +103,18 @@ def check_database():
             raise ValueError("Membership references unknown cards in " + name)
     if set(row["id"] for row in membership) != seen:
         raise ValueError("Set membership does not cover every card")
+    base_by_id = {row["id"]: row for row in base}
+    column_map = {
+        "name": "name_en", "kind": "kind", "level": "level",
+        "battle_type": "battle_type", "attack_a": "attack_a",
+        "attack_b": "attack_b", "attack_c": "attack_c",
+    }
+    for member in membership:
+        card = base_by_id[member["id"]]
+        for index_col, db_col in column_map.items():
+            if member[index_col] != card[db_col]:
+                raise ValueError("Set index mismatch for %s (%s)" %
+                                 (member["id"], index_col))
     existing = [{k: row.get(k, "") for k in EXTENDED_FIELDS} for row in base]
     updated = existing != combined or db_headers != EXTENDED_FIELDS
     return combined, updated
