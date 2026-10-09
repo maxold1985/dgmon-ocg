@@ -14,7 +14,24 @@ static void printCard(const hc::CatalogCard& c) {
     } else if(c.kind=="Digimon")
         std::cout<<" | A="<<c.power[0]<<" B="<<c.power[1]<<" C="<<c.power[2]
                  <<" | battle rules pending verification";
+    if(!c.digimonType.empty())
+        std::cout<<" | Type="<<c.digimonType;
+    if(!c.attribute.empty())
+        std::cout<<" | Attribute="<<c.attribute;
+    if(!c.fieldCode.empty())
+        std::cout<<" | Field="<<c.fieldCode;
+    if(!c.japanese.empty())
+        std::cout<<" | JP="<<c.japanese;
+    if(!c.optionType.empty())
+        std::cout<<" | Option="<<c.optionType;
+    if(c.printedBonus>=0)
+        std::cout<<" | Printed bonus=+"<<c.printedBonus;
+    if(!c.specialAbility.empty())
+        std::cout<<" | Ability="<<c.specialAbility;
+    if(!c.attackNames[0].empty())
+        std::cout<<" | Attacks="<<c.attackNames[0]<<"/"<<c.attackNames[1]<<"/"<<c.attackNames[2];
     std::cout<<" | "<<c.effectStatus
+             <<" | Evidence="<<c.verificationLevel
              <<" | "<<c.source<<"\n";
 }
 int main(int argc,char** argv) {
