@@ -1,6 +1,7 @@
 #ifdef _WIN32
 #include "card_catalog.h"
 #include "auto_player.h"
+#include "starter_decks.h"
 #include "card_viewer_paths.h"
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -171,10 +172,10 @@ const wchar_t* phaseText(hc::Phase p) {
 bool canAct(hc::Phase phase) {return matchStarted&&engine.phase()==phase;}
 bool canPrepare() {return canAct(hc::Phase::Preparation)&&!engine.getPlayer(0).prepared;}
 void drawZones(Graphics& g) {
-    panel(g,16,67,202,160,L"PONTOS - CPU",rgb(210,120,103));
+    panel(g,16,67,202,160,L"PONTOS CPU - ST2",rgb(210,120,103));
     panel(g,16,239,202,105,L"REQUISITOS",rgb(220,140,169));
     panel(g,16,356,202,115,L"EVOLUCAO",rgb(223,160,88));
-    panel(g,16,483,202,140,L"PONTOS - VOCE",rgb(94,199,149));
+    panel(g,16,483,202,140,L"PONTOS VOCE - ST1",rgb(94,199,149));
     panel(g,16,635,202,110,L"CUSTO DE EVO",rgb(220,140,169));
     if(matchStarted) {
         const hc::Player& cpu=engine.getPlayer(1);
@@ -196,8 +197,8 @@ void drawZones(Graphics& g) {
     }
 }
 void drawField(Graphics& g) {
-    panel(g,234,66,687,264,L"CAMPO ADVERSARIO",rgb(187,113,105));
-    panel(g,234,344,687,398,L"SEU CAMPO",rgb(75,178,171));
+    panel(g,234,66,687,264,L"STARTER VER. 2 - CPU",rgb(187,113,105));
+    panel(g,234,344,687,398,L"STARTER VER. 1 - JOGADOR",rgb(75,178,171));
     // Opponent hand: cards are always face down.
     caption(g,L"MAO",249,103,13,rgb(211,228,229),true);
     int enemyCards=matchStarted?(int)engine.getPlayer(1).hand.size():6;
@@ -272,7 +273,7 @@ void render(Graphics& g) {
     fill(g,0,0,W,55,rgb(14,70,86));
     caption(g,L"DIGIMON CARD GAME  |  HYPER COLOSSEUM",20,10,25,rgb(254,224,141),true);
     std::wstring mode=demoOnly?L"AUTO DEMO":(autoRunning?L"AUTO JOGO":(matchStarted?L"MANUAL":L"PREVIA"));
-    caption(g,L"Bo-1 a Bo-300 | "+mode+L" | "+std::wstring(phaseText(matchStarted?engine.phase():hc::Phase::Setup)),662,18,16,rgb(224,248,247),true);
+    caption(g,L"STARTER ST1 x ST2 | "+mode+L" | "+std::wstring(phaseText(matchStarted?engine.phase():hc::Phase::Setup)),662,18,16,rgb(224,248,247),true);
     drawZones(g);
     drawField(g);
     drawSidebar(g);
@@ -284,58 +285,23 @@ bool beginMatch() {
     if(!bridge)return false;
     matchStarted=false;
     selectedHand=-1;
-    std::vector<std::string> ids;
-    std::set<std::string> names;
-    std::string starter;
-    std::string enemyStarter;
-    for(size_t i=0;i<collection.size();++i) {
-        const hc::CatalogCard& c=*collection[i];
-        if(c.level=="III" && c.isPlayableCore()) {
-            starter=c.id;
-            names.insert(c.name);
-            ids.push_back(c.id);
-            break;
-        }
-    }
-    if(starter.empty()) {
-        feedback=L"Sem Digimon Nivel III verificado neste intervalo. Tabuleiro em modo visual.";
-        return false;
-    }
-    for(size_t i=0;i<collection.size()&&ids.size()<10;++i) {
-        const hc::CatalogCard& c=*collection[i];
-        if(c.isPlayableCore() && names.insert(c.name).second)ids.push_back(c.id);
-    }
-    if(ids.size()<10) {
-        feedback=L"Menos de 10 nomes jogaveis verificados. Faltam dados para deck de 30 cartas.";
-        return false;
-    }
-    for(size_t i=0;i<ids.size();++i) {
-        const hc::CatalogCard* candidate=catalog.find(ids[i]);
-        if(candidate && candidate->level=="III" && ids[i]!=starter) {
-            enemyStarter=ids[i];
-            break;
-        }
-    }
-    if(enemyStarter.empty())enemyStarter=starter;
-    std::vector<std::string> deckNames;
-    for(size_t i=0;i<ids.size();++i)for(int k=0;k<3;++k)deckNames.push_back(ids[i]);
-    const std::vector<int> deck=bridge->buildDeck(deckNames);
-    const int starterId=bridge->numberToInternal(starter);
-    if(deck.size()!=30 || starterId<0) {
-        feedback=L"Nao foi possivel gerar deck valido sem inventar efeitos.";
-        return false;
-    }
+    hc::StarterDeck first,second;
+    hc::Result a=hc::StarterDeckBuilder::build(catalog,*bridge,1,first);
+    if(!a.ok){feedback=wide(a.message);return false;}
+    hc::Result b=hc::StarterDeckBuilder::build(catalog,*bridge,2,second);
+    if(!b.ok){feedback=wide(b.message);return false;}
     hc::Engine fresh(2026);
     hc::Result registered=bridge->registerCoreCards(fresh);
     if(!registered.ok){feedback=wide(registered.message);return false;}
-    hc::Result status=fresh.start(deck,deck,starterId,bridge->numberToInternal(enemyStarter),0);
-    if(!status.ok){feedback=wide(status.message);return false;}
+    hc::Result started=fresh.start(first.cards,second.cards,first.starter,second.starter,0);
+    if(!started.ok){feedback=wide(started.message);return false;}
     engine=fresh;
     matchStarted=true;
     selectedHand=-1;
-    feedback=L"Partida validada: 30 cartas por jogador. AUTO executa as fases do motor.";
+    feedback=L"Starter Ver. 1 (voce) x Starter Ver. 2 (CPU) | 30 cartas cada.";
     return true;
 }
+
 void advanceAutomatic() {
     if(!autoRunning)return;
     if(demoOnly) {
@@ -393,7 +359,7 @@ void gameAction(Action a,int index) {
     if(a==CHOOSE_PREVIEW) {
         if(index>=0 && (size_t)index<collection.size())currentCard=(size_t)index;
         selectedHand=-1;
-        feedback=L"Visualizacao de carta Bo. Pressione N para tentar iniciar a partida.";
+        feedback=L"Visualizacao de carta Starter. Pressione N para iniciar a partida.";
         return;
     }
     if(a==CHOOSE_HAND) {
