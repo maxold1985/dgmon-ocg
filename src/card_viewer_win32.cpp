@@ -246,9 +246,19 @@ void drawSidebar(Graphics& g) {
     const hc::CatalogCard* c=focusCard();
     cardBox(g,c,998,101,206,294);
     if(c) {
-        caption(g,wide(c->id)+L"  "+wide(c->kind),953,412,18,rgb(255,222,154),true);
-        caption(g,wide(c->name),953,442,17,rgb(223,244,245));
-        caption(g,c->isPlayableCore()?L"Regra basica validada":L"Regras incompletas",953,472,14,c->isPlayableCore()?rgb(115,214,155):rgb(255,157,132));
+        caption(g,wide(c->id)+L"  "+wide(c->kind),953,399,17,rgb(255,222,154),true);
+        caption(g,wide(c->name),953,426,16,rgb(223,244,245));
+        caption(g,L"LEVEL "+wide(c->level)+L" | TYPE "+wide(c->battleType),953,451,13,rgb(204,225,238));
+        if(c->kind=="Digimon")
+            caption(g,L"A "+std::to_wstring(c->power[0])+L"   B "+
+                    std::to_wstring(c->power[1])+L"   C "+
+                    std::to_wstring(c->power[2]),953,473,14,rgb(247,220,155));
+        else caption(g,L"OPTION: "+wide(c->effectStatus),953,474,12,rgb(247,220,155));
+        const bool implemented=c->isPlayableCore()||
+           c->id=="St-49"||c->id=="St-50"||c->id=="St-51";
+        caption(g,implemented?L"PROGRAMADA | botao direito: detalhes":
+            L"EFEITO PENDENTE | botao direito: detalhes",953,492,11,
+            implemented?rgb(115,214,155):rgb(255,157,132));
     }
     button(g,NEW_GAME,L"NOVA",949,509,91,40,true);
     button(g,AUTO_TOGGLE,autoRunning?L"PAUSAR":L"AUTO JOGAR",1047,509,136,40,true);
@@ -333,8 +343,11 @@ void advanceAutomatic() {
         case hc::Phase::Preparation:label=L"PREPARACAO";break;
         case hc::Phase::Evolution:label=L"EVOLUCAO";break;
         case hc::Phase::Battle:
-            label=L"BATALHA "+std::to_wstring(engine.lastPower(0))+
-                L" x "+std::to_wstring(engine.lastPower(1));break;
+            if(step.result.message=="Battle option activated")
+                label=L"PLUG-IN "+std::wstring(step.actor==0?L"ST1":L"ST2");
+            else label=L"BATALHA "+std::to_wstring(engine.lastPower(0))+
+                L" x "+std::to_wstring(engine.lastPower(1));
+            break;
         case hc::Phase::Points:
             label=L"PONTOS "+std::to_wstring(engine.getPlayer(0).points)+
                 L" x "+std::to_wstring(engine.getPlayer(1).points);break;
