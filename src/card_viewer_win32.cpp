@@ -485,6 +485,7 @@ void showCardInfo(HWND hwnd) {
     const hc::CatalogCard* c=focusCard();
     if(!c)return;
     std::wstring details=L"ID: "+wide(c->id)+L"\nNOME: "+wide(c->name)+
+        L"\nJAPONES: "+wide(c->japanese)+
         L"\nCOLECAO: "+wide(c->set)+L"\nTIPO: "+wide(c->kind)+
         L"\nNIVEL: "+wide(c->level)+L"\nBATTLE TYPE: "+wide(c->battleType);
     if(c->kind=="Digimon") {
