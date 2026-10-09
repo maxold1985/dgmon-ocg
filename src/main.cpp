@@ -1,67 +1,84 @@
-#include "card_catalog.h"
-#include <iostream>
-#include <vector>
-#include <string>
+#include "starter_decks.h"
+#include "auto_player.h"
 #include <cstdlib>
+#include <iostream>
+#include <string>
+#include <vector>
+
 static void printCard(const hc::CatalogCard& c) {
-    std::cout << c.id << " | " << c.set << " | " << c.name << " | " << c.kind;
-    if (c.combatVerified) {
-        std::cout << " | " << c.level << " " << c.battleType
-                  << " | A=" << c.power[0] << " B=" << c.power[1] << " C=" << c.power[2]
-                  << " | Lost=" << c.lost[0] << "/" << c.lost[1] << "/" << c.lost[2] << "/" << c.lost[3];
-    } else std::cout << " | stats incomplete";
-    std::cout << " | " << (c.isPlayableCore()?"CORE READY":"CATALOG ONLY") << "\n";
+    std::cout<<c.id<<" | "<<c.set<<" | "<<c.name<<" | "<<c.kind;
+    if(c.combatVerified) {
+        std::cout<<" | Level "<<c.level<<" | Battle "<<c.battleType
+                 <<" | A="<<c.power[0]<<" B="<<c.power[1]<<" C="<<c.power[2]
+                 <<" | Lost="<<c.lost[0]<<"/"<<c.lost[1]<<"/"<<c.lost[2]<<"/"<<c.lost[3];
+    } else if(c.kind=="Digimon")
+        std::cout<<" | A="<<c.power[0]<<" B="<<c.power[1]<<" C="<<c.power[2]
+                 <<" | battle rules pending verification";
+    std::cout<<" | "<<c.effectStatus
+             <<" | "<<c.source<<"\n";
 }
 int main(int argc,char** argv) {
-    const std::string path=argc>1?argv[1]:"data/cards.csv";
+    const std::string path=argc>1?argv[1]:"data/starter_cards.csv";
     hc::CardCatalog cards;
     hc::Result status=cards.loadCSV(path);
     if(!status.ok){std::cerr<<status.message<<"\n";return 1;}
-    hc::Engine e(12345);
     hc::EngineCardBridge bridge(cards);
-    std::cout<<status.message<<"; "<<bridge.eligibleCount()<<" core eligible\n";
-    hc::Result registered=bridge.registerCoreCards(e);
+    hc::Engine engine(12345);
+    std::cout<<status.message<<"; "<<bridge.eligibleCount()
+             <<" programmed cards (includes three battle Plug-Ins)\n";
+    hc::Result registered=bridge.registerCoreCards(engine);
     if(!registered.ok){std::cerr<<registered.message<<"\n";return 2;}
     std::cout<<registered.message<<"\n";
-    if(argc>2 && std::string(argv[2])=="--card") {
+    if(argc>2&&std::string(argv[2])=="--card") {
         if(argc<4)return 3;
         const hc::CatalogCard* c=cards.find(argv[3]);
         if(!c){std::cerr<<"Card not found\n";return 4;}
         printCard(*c);
         return 0;
     }
-    if(argc>2 && std::string(argv[2])=="--set") {
+    if(argc>2&&std::string(argv[2])=="--starter") {
         if(argc<4)return 3;
-        std::vector<const hc::CatalogCard*> v=cards.bySet(argv[3]);
-        for(size_t i=0;i<v.size();++i)printCard(*v[i]);
-        std::cout<<"Total="<<v.size()<<"\n";
-        return 0;
+        const int version=std::atoi(argv[3]);
+        if(version!=1&&version!=2)return 3;
+        const std::vector<const hc::CatalogCard*> pool=
+            hc::StarterDeckBuilder::cardsInSet(cards,version);
+        for(size_t i=0;i<pool.size();++i)printCard(*pool[i]);
+        std::cout<<"Starter Ver. "<<version<<": "<<pool.size()<<" distinct set slots\n";
+        return pool.size()==60?0:5;
     }
-    if(argc>2 && std::string(argv[2])=="--demo") {
-        // Exactly 30 cards, 10 distinct rookie card names, 3 copies each.
-        const char* names[]={"St-1","St-3","St-5","St-7","St-9","St-11","St-13","St-18","St-23","St-24"};
-        std::vector<std::string> ids;
-        for(int i=0;i<10;++i)for(int k=0;k<3;++k)ids.push_back(names[i]);
-        const std::vector<int> deck=bridge.buildDeck(ids);
-        if(deck.size()!=30){std::cerr<<"Demo deck has unverified cards\n";return 5;}
-        hc::Result r=e.start(deck,deck,bridge.numberToInternal("St-1"),bridge.numberToInternal("St-5"),0);
-        if(!r.ok){std::cerr<<r.message<<"\n";return 6;}
-        std::cout<<"Setup: "<<r.message<<"\n";
-        for(int round=0;round<3 && e.phase()!=hc::Phase::Finished;++round) {
-            const int first=e.firstPlayer();
-            if(!e.commitPreparation(first).ok||!e.commitPreparation(1-first).ok)return 7;
-            if(!e.evolve(first).ok||!e.evolve(1-first).ok)return 8;
-            if(!e.resolveBattle().ok)return 9;
-            std::cout<<"Round "<<e.round()<<" A="<<e.lastPower(0)<<" B="<<e.lastPower(1)<<" winner="<<e.winner()<<"\n";
-            if(!e.resolvePoints().ok)return 10;
-            std::cout<<"Points "<<e.getPlayer(0).points<<" - "<<e.getPlayer(1).points<<"\n";
+    if(argc>2&&std::string(argv[2])=="--demo") {
+        hc::StarterDeck first,second;
+        hc::Result a=hc::StarterDeckBuilder::build(cards,bridge,1,first);
+        hc::Result b=hc::StarterDeckBuilder::build(cards,bridge,2,second);
+        if(!a.ok||!b.ok) {
+            std::cerr<<a.message<<" "<<b.message<<"\n";
+            return 5;
         }
-    } else {
-        const hc::CatalogCard* a=cards.find("St-1");
-        const hc::CatalogCard* b=cards.find("Bo-1");
-        if(a)printCard(*a);
-        if(b)printCard(*b);
-        std::cout<<"Commands: <csv> --card St-1 | --set \"Booster 1\" | --demo\n";
+        hc::Result started=engine.start(first.cards,second.cards,
+                                        first.starter,second.starter,0);
+        if(!started.ok){std::cerr<<started.message<<"\n";return 6;}
+        std::cout<<"STARTER VER. 1 vs STARTER VER. 2\n";
+        for(int i=0;i<1000&&engine.phase()!=hc::Phase::Finished;++i) {
+            const hc::AutoStep step=hc::AutoPlayer::step(engine);
+            if(!step.result.ok){std::cerr<<step.result.message<<"\n";return 7;}
+            if(step.phaseBefore==hc::Phase::Battle&&
+               step.result.message=="Battle resolved")
+                std::cout<<"Battle: "<<engine.lastPower(0)<<" vs "
+                         <<engine.lastPower(1)<<"\n";
+            if(step.phaseBefore==hc::Phase::Points)
+                std::cout<<"Round "<<engine.round()<<": "
+                         <<engine.getPlayer(0).points<<" vs "
+                         <<engine.getPlayer(1).points<<"\n";
+        }
+        const bool finished=engine.phase()==hc::Phase::Finished;
+        std::cout<<(finished?"Match finished":"Match step limit exceeded")<<"\n";
+        return finished?0:8;
     }
+    const char* sample[]={"St-1","St-2","St-49","St-62","St-111"};
+    for(size_t i=0;i<sizeof(sample)/sizeof(sample[0]);++i) {
+        const hc::CatalogCard* c=cards.find(sample[i]);
+        if(c)printCard(*c);
+    }
+    std::cout<<"Commands: <csv> --card St-2 | --starter 1 | --starter 2 | --demo\n";
     return 0;
 }
