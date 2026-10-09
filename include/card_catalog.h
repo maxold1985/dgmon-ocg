@@ -8,9 +8,14 @@ struct CatalogCard {
     std::string id, set, name, japanese, kind, level, battleType;
     std::string evolutionRequirements, effectStatus, source;
     std::string cancelTarget;
+    // Metadata sourced from the two Wikimon Starter set tables and reviewed cards.
+    std::string digimonType, attribute, fieldCode, frame, optionType;
+    std::string attackNames[3], specialAbility, imageFile;
+    std::string sourceSet, detailsSource, verificationLevel, notes;
+    int printedBonus;
     int power[3], lost[4];
     bool combatVerified;
-    CatalogCard() : combatVerified(false) {
+    CatalogCard() : printedBonus(-1), combatVerified(false) {
         for (int i=0;i<3;++i) power[i]=-1;
         for (int i=0;i<4;++i) lost[i]=-1;
     }
