@@ -24,6 +24,37 @@ int main(int argc,char** argv) {
     assert(st1->power[0]==360 && st1->lost[0]==10);
     assert(st2->power[0]==440 && st2->lost[0]==20);
     assert(st2->evolutionRequirements=="Agumon:OO");
+    // Enriched database: source-backed species, attribute, field, attacks, image.
+    assert(st1->japanese=="アグモン");
+    assert(st1->digimonType=="Reptile");
+    assert(st1->attribute=="Vaccine");
+    assert(st1->fieldCode=="NSp");
+    assert(st1->frame=="Blue");
+    assert(st1->attackNames[0]=="Baby Flame");
+    assert(st1->attackNames[2]=="Guard (A->0)");
+    assert(st1->imageFile=="St-1.jpg");
+    assert(st1->verificationLevel=="individual_page_reviewed");
+    const hc::CatalogCard* hagurumon=catalog.find("St-64");
+    assert(hagurumon && hagurumon->digimonType=="Machine");
+    const hc::CatalogCard* plugA=catalog.find("St-49");
+    const hc::CatalogCard* plugC=catalog.find("St-50");
+    const hc::CatalogCard* plugB=catalog.find("St-51");
+    assert(plugA && plugC && plugB);
+    assert(plugA->optionType=="Item" && plugA->printedBonus==30);
+    assert(plugC->printedBonus==50 && plugB->printedBonus==30);
+    assert(catalog.find("St-52")->optionType=="Program");
+    assert(catalog.find("St-61")->verificationLevel=="set_list_only");
+    assert(catalog.find("St-61")->lost[0]==-1);
+    for(const hc::CatalogCard* c : catalog.all()) {
+        assert(c->imageFile==c->id+".jpg");
+        assert(!c->japanese.empty());
+        assert(!c->verificationLevel.empty());
+        if(c->kind=="Digimon") {
+            assert(!c->digimonType.empty());
+            assert(!c->attribute.empty());
+            assert(!c->fieldCode.empty());
+        } else assert(!c->optionType.empty());
+    }
     assert(st2->isPlayableCore() && st62->isPlayableCore());
     assert(catalog.find("St-49")->kind=="Option");
     assert(!catalog.find("St-61")->isPlayableCore()); // unimplemented evolution
