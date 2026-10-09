@@ -486,30 +486,50 @@ void showCardInfo(HWND hwnd) {
     if(!c)return;
     std::wstring details=L"ID: "+wide(c->id)+L"\nNOME: "+wide(c->name)+
         L"\nJAPONES: "+wide(c->japanese)+
-        L"\nCOLECAO: "+wide(c->set)+L"\nTIPO: "+wide(c->kind)+
-        L"\nNIVEL: "+wide(c->level)+L"\nBATTLE TYPE: "+wide(c->battleType);
+        L"\nCONJUNTO: "+wide(c->set)+L"\nCLASSE: "+wide(c->kind);
     if(c->kind=="Digimon") {
-        details+=L"\n\nATACK A: "+std::to_wstring(c->power[0])+
-            L"\nATACK B: "+std::to_wstring(c->power[1])+
-            L"\nATACK C: "+std::to_wstring(c->power[2]);
+        details+=L"\nTIPO: "+wide(c->digimonType)+
+                 L"\nATRIBUTO: "+wide(c->attribute)+
+                 L"\nCAMPO: "+wide(c->fieldCode)+
+                 L"\nNIVEL: "+wide(c->level)+
+                 L"\nBATTLE TYPE: "+wide(c->battleType);
+        details+=L"\n\nATAQUE A: "+std::to_wstring(c->power[0]);
+        if(!c->attackNames[0].empty())details+=L" | "+wide(c->attackNames[0]);
+        details+=L"\nATAQUE B: "+std::to_wstring(c->power[1]);
+        if(!c->attackNames[1].empty())details+=L" | "+wide(c->attackNames[1]);
+        details+=L"\nATAQUE C: "+std::to_wstring(c->power[2]);
+        if(!c->attackNames[2].empty())details+=L" | "+wide(c->attackNames[2]);
         if(c->combatVerified)
             details+=L"\nLOST III/IV/PERFECT/ULTIMATE: "+
-               std::to_wstring(c->lost[0])+L"/"+std::to_wstring(c->lost[1])+
-               L"/"+std::to_wstring(c->lost[2])+L"/"+std::to_wstring(c->lost[3]);
+                std::to_wstring(c->lost[0])+L"/"+std::to_wstring(c->lost[1])+
+                L"/"+std::to_wstring(c->lost[2])+L"/"+std::to_wstring(c->lost[3]);
+        else details+=L"\nLOST POINTS: ainda nao verificados";
         if(!c->evolutionRequirements.empty())
             details+=L"\nEVOLUCAO: "+wide(c->evolutionRequirements);
-    } else if(c->id=="St-49"||c->id=="St-50"||c->id=="St-51") {
-        const wchar_t* attack=c->id=="St-49"?L"A":(c->id=="St-50"?L"C":L"B");
-        details+=L"\n\nPLUG-IN PROGRAMADO: usa ataque ";
-        details+=attack;
-        details+=L" independente do Battle Type adversario.\nDescartado ao fim do turno.\n";
-        details+=L"O simbolo +30/+50 impresso na carta nao esta modelado.";
+        if(!c->specialAbility.empty())
+            details+=L"\nHABILIDADE IMPRESSA: "+wide(c->specialAbility)+
+                     L" (nao implementada no motor)";
+    } else {
+        details+=L"\nTIPO DE OPCAO: "+wide(c->optionType);
+        if(c->printedBonus>=0)
+            details+=L"\nVALOR IMPRESSO: +"+std::to_wstring(c->printedBonus)+
+                     L" (sem efeito programado)";
+        if(c->id=="St-49"||c->id=="St-50"||c->id=="St-51") {
+            const wchar_t* attack=c->id=="St-49"?L"A":(c->id=="St-50"?L"C":L"B");
+            details+=L"\nEFEITO IMPLEMENTADO: escolher ataque ";
+            details+=attack;
+            details+=L" independentemente do Battle Type inimigo.";
+            details+=L"\nVai para a Dark Area ao final do turno.";
+        }
     }
-    details+=L"\nSTATUS: "+wide(c->effectStatus)+
-             L"\nFONTE: "+wide(c->source);
+    details+=L"\n\nVERIFICACAO: "+wide(c->verificationLevel)+
+             L"\nEFEITO: "+wide(c->effectStatus);
+    if(!c->notes.empty())details+=L"\nNOTA: "+wide(c->notes);
+    details+=L"\nFONTE: "+wide(c->source);
+    if(!c->detailsSource.empty())details+=L"\nFICHA: "+wide(c->detailsSource);
     if(c->effectStatus=="unverified")details+=
-        L"\n\nA carta consta no set, mas o efeito individual ainda nao foi programado.";
-    MessageBoxW(hwnd,details.c_str(),L"Hyper Colosseum - Dados da carta",MB_OK|MB_ICONINFORMATION);
+        L"\n\nOs efeitos desta carta ainda nao foram implementados.";
+    MessageBoxW(hwnd,details.c_str(),L"Hyper Colosseum - Banco de cartas",MB_OK|MB_ICONINFORMATION);
 }
 LRESULT CALLBACK windowProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     switch(msg) {
