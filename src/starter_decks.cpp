@@ -1,5 +1,6 @@
 #include "starter_decks.h"
 #include <set>
+#include <algorithm>
 #include <sstream>
 #include <cstdlib>
 
@@ -32,6 +33,10 @@ std::vector<const CatalogCard*> StarterDeckBuilder::cardsInSet(
     const std::vector<const CatalogCard*> all=catalog.all();
     for(size_t i=0;i<all.size();++i)
         if(belongsToSet(all[i]->id,version))result.push_back(all[i]);
+    std::sort(result.begin(),result.end(),
+        [](const CatalogCard* a,const CatalogCard* b){
+            return cardNumber(a->id)<cardNumber(b->id);
+        });
     return result;
 }
 Result StarterDeckBuilder::build(const CardCatalog& catalog,
