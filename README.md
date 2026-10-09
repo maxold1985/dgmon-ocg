@@ -90,3 +90,36 @@ ctest --test-dir build_vs2022_x64 -C Release --output-on-failure
 ```
 
 O CTest inclui validações de inventário, construção dos dois decks, partida automática e efeitos de troca de ataque. A compilação do MSVC precisa ser confirmada no computador Windows.
+
+
+## ZIP para DAT com XOR (C++11)
+
+O executável `hc_zip_dat.exe` empacota um ZIP em um arquivo DAT ofuscado.
+Formato binário: `HCXOR01\n` (8 bytes), tamanho original `uint64` little-endian (8 bytes),
+e todos os bytes ZIP com XOR de chave repetida. O algoritmo processa blocos de 64 KiB,
+sem carregar o arquivo inteiro em RAM. Os bytes ZIP são preservados na decodificação.
+
+Depois de compilar com `build_vs2022.bat`, execute no PowerShell:
+
+```powershell
+.\build_vs2022_x64\Release\hc_zip_dat.exe encode .\data\cards.zip .\data\cards.dat "minha-chave"
+.\build_vs2022_x64\Release\hc_zip_dat.exe decode .\data\cards.dat .\data\cards_restauradas.zip "minha-chave"
+```
+
+Também existe `xor` para aplicar XOR bruto, sem cabeçalho:
+
+```powershell
+.\build_vs2022_x64\Release\hc_zip_dat.exe xor .\data\cards.zip .\data\cards_raw.dat "minha-chave"
+.\build_vs2022_x64\Release\hc_zip_dat.exe xor .\data\cards_raw.dat .\data\cards_restauradas.zip "minha-chave"
+```
+
+Use caminhos de entrada e saída diferentes. A opção `decode` confere o cabeçalho,
+o comprimento do pacote e os quatro bytes de assinatura ZIP recuperados. A assinatura
+não é autenticação criptográfica nem uma validação integral do arquivo ZIP.
+
+**Aviso:** XOR com chave repetida **não é criptografia segura**. A chave é passada
+na linha de comando e pode ser visível no histórico/processos. Para proteger
+conteúdo confidencial use criptografia autenticada, como AES-GCM.
+
+O CTest `xor_zip_dat_roundtrip` valida codificação, restauração byte a byte,
+XOR bruto, chave incorreta e rejeição de caminhos idênticos.
