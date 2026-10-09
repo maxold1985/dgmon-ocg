@@ -282,9 +282,12 @@ void render(Graphics& g) {
 }
 bool beginMatch() {
     if(!bridge)return false;
+    matchStarted=false;
+    selectedHand=-1;
     std::vector<std::string> ids;
     std::set<std::string> names;
     std::string starter;
+    std::string enemyStarter;
     for(size_t i=0;i<collection.size();++i) {
         const hc::CatalogCard& c=*collection[i];
         if(c.level=="III" && c.isPlayableCore()) {
@@ -306,6 +309,14 @@ bool beginMatch() {
         feedback=L"Menos de 10 nomes jogaveis verificados. Faltam dados para deck de 30 cartas.";
         return false;
     }
+    for(size_t i=0;i<ids.size();++i) {
+        const hc::CatalogCard* candidate=catalog.find(ids[i]);
+        if(candidate && candidate->level=="III" && ids[i]!=starter) {
+            enemyStarter=ids[i];
+            break;
+        }
+    }
+    if(enemyStarter.empty())enemyStarter=starter;
     std::vector<std::string> deckNames;
     for(size_t i=0;i<ids.size();++i)for(int k=0;k<3;++k)deckNames.push_back(ids[i]);
     const std::vector<int> deck=bridge->buildDeck(deckNames);
@@ -317,12 +328,12 @@ bool beginMatch() {
     hc::Engine fresh(2026);
     hc::Result registered=bridge->registerCoreCards(fresh);
     if(!registered.ok){feedback=wide(registered.message);return false;}
-    hc::Result status=fresh.start(deck,deck,starterId,starterId,0);
+    hc::Result status=fresh.start(deck,deck,starterId,bridge->numberToInternal(enemyStarter),0);
     if(!status.ok){feedback=wide(status.message);return false;}
     engine=fresh;
     matchStarted=true;
     selectedHand=-1;
-    feedback=L"Partida local iniciada: 30 cartas / jogador. CPU passa nas fases nao implementadas.";
+    feedback=L"Partida validada: 30 cartas por jogador. AUTO executa as fases do motor.";
     return true;
 }
 void advanceAutomatic() {
