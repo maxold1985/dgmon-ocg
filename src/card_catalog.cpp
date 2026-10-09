@@ -137,7 +137,10 @@ EngineCardBridge::EngineCardBridge(const CardCatalog& catalog):catalog_(catalog)
         const int internal=(int)k+1;
         toId_[cards[k]->id]=internal;
         toNumber_[internal]=cards[k]->id;
-        if(cards[k]->isPlayableCore())allowed_[cards[k]->id]=true;
+        // Only three verified battle Plug-Ins have an implementation so far.
+        if(cards[k]->isPlayableCore() ||
+           cards[k]->id=="St-49"||cards[k]->id=="St-50"||cards[k]->id=="St-51")
+            allowed_[cards[k]->id]=true;
     }
 }
 int EngineCardBridge::numberToInternal(const std::string& number) const {
@@ -158,6 +161,14 @@ Result EngineCardBridge::registerCoreCards(Engine& engine) const {
         Card out;
         out.id=toId_.find(c.id)->second;
         out.name=c.name;
+        if(c.kind=="Option") {
+            // St-49 A, St-50 C, St-51 B: effect documented on Wikimon.
+            out.kind=Kind::Option;
+            out.optionAttackOverride=c.id=="St-49"?0:(c.id=="St-50"?2:1);
+            engine.registerCard(out);
+            ++ready;
+            continue;
+        }
         out.kind=Kind::Digimon;
         out.level=(Level)parseLevel(c.level);
         out.battleType=(Attack)parseAttack(c.battleType);
