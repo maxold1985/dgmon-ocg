@@ -1,33 +1,37 @@
 # Digimon Hyper Colosseum OCG (1999–2002)
 
-Protótipo do card game clássico japonês, com **motor de regras em C++11** e catálogo de cartas; projetado para futura interface DirectX 11.
+Motor experimental de cartas em C++11 com catálogo offline de 283 registros. Ainda não contém interface DirectX 11.
 
-## Conteúdo
+## Visual Studio 2022 (MSVC v143)
 
-- `include/engine.h` e `src/engine.cpp`: preparação, evolução básica, combate A/B/C e contagem de pontos.
-- `include/card_catalog.h`, `src/card_catalog.cpp`: leitura de CSV, busca por coleção/número, verificação de campos e ponte para o motor.
-- `src/main.cpp`: aplicativo de terminal para consultar e testar as cartas.
-- `tests/`: testes C++ do motor e protótipos de testes de importador.
-- `data/cards.tar.gz`: catálogo offline com **283 registros** do Starter Ver. 1, Starter Ver. 2, Starter Ver. 7, Booster 1 e Booster 15. O CMake extrai automaticamente `data/cards.csv` durante a configuração.
-- `build_vs2013.bat`: compilação no Visual Studio 2013 / Win32.
-
-## Compilação — Visual Studio 2013
-
-Necessário: CMake compatível e compilador de C++ do Visual Studio 2013.
+Instale **Desktop development with C++**, o toolset **MSVC v143**, Windows SDK e CMake.
 
 ```bat
-cmake -S . -B build -G "Visual Studio 12 2013"
-cmake --build build --config Release
-ctest --test-dir build -C Release --output-on-failure
-build\Release\hc_cards.exe data\cards.csv --demo
+git clone -b mainn https://github.com/maxold1985/dgmon-ocg.git
+cd dgmon-ocg
+build_vs2022.bat
 ```
 
-Alternativamente, execute `build_vs2013.bat`.
+O script gera a solução x64, compila Release, executa CTest e inicia a demonstração. Para Win32:
 
-## Estado e limitações
+```bat
+build_vs2022.bat Win32
+```
 
-**Protótipo incompleto, não é ainda uma implementação fiel de todas as cartas/regras japonesas.** Muitas cartas estão cadastradas somente para consulta, sem atributos ou efeitos prontos para uso em batalha; Winning Percentage, Jogress, Option Cards e efeitos específicos ainda precisam ser concluídos. Não inclui renderizador DirectX 11 nem imagens de cartas.
+Comandos manuais:
 
-O CSV tem campos incompletos intencionalmente. A ponte desabilita cartas sem os dados essenciais; **não inventar** valores ausentes.
+```bat
+cmake -S . -B build_vs2022_x64 -G "Visual Studio 17 2022" -A x64 -T v143
+cmake --build build_vs2022_x64 --config Release
+ctest --test-dir build_vs2022_x64 -C Release --output-on-failure
+```
 
-O script `sync_1999_2002.bat` é uma entrada para o futuro importador Wikimon. Para executá-lo é necessário adicionar `tools/sync_wikimon.py` ao projeto (disponível no arquivo ZIP original gerado na conversa). O catálogo offline já está incluído no repositório; não requer o sincronizador para a compilação.
+Abra `build_vs2022_x64/digimon_hyper_colosseum_2002.sln` no Visual Studio. O projeto inicial é `hc_cards`.
+
+O catálogo comprimido em `data/cards.tar.gz` é extraído para o diretório de build, sem alterar os fontes. Os arquivos `include/`, `src/` e `tests/` permanecem em C++11.
+
+## Limitações
+
+O motor implementa preparação, evolução básica, batalha e pontos, mas ainda não cobre todos os efeitos oficiais, Option Cards, Jogress ou o renderizador DX11. Alguns registros do catálogo não são utilizáveis em batalhas. O script legado `sync_1999_2002.bat` depende de um importador ainda não publicado e não é necessário para o build offline.
+
+**Nota:** a configuração MSVC 2022 foi publicada; o build ainda não foi validado em um computador Windows com Visual Studio 2022.
