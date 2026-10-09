@@ -19,7 +19,17 @@ AutoStep AutoPlayer::step(Engine& engine) {
         const int player=engine.getPlayer(first).evolved?1-first:first;
         return AutoStep(engine.evolve(player,true),phase,player);
     }
-    if(phase==Phase::Battle)return AutoStep(engine.resolveBattle(),phase,-1);
+    if(phase==Phase::Battle) {
+        for(int player=0;player<2;++player) {
+            if(!engine.getPlayer(player).options.empty())continue;
+            const std::vector<int> hand=engine.getPlayer(player).hand;
+            for(size_t i=0;i<hand.size();++i) {
+                const Result used=engine.playBattleOption(player,hand[i]);
+                if(used.ok)return AutoStep(used,phase,player);
+            }
+        }
+        return AutoStep(engine.resolveBattle(),phase,-1);
+    }
     if(phase==Phase::Points)return AutoStep(engine.resolvePoints(),phase,-1);
     if(phase==Phase::Finished)return AutoStep(Result(false,"Game already finished"),phase,-1);
     return AutoStep(Result(false,"Game not started"),phase,-1);
