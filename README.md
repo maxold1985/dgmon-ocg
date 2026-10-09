@@ -40,9 +40,11 @@ build_vs2022_x64\Release\hc_card_viewer.exe
 
 O tabuleiro exibe os campos do adversário e do jogador, Digimon ativo, suporte, requisitos e custo de evolução, medidor de pontos, Net Ocean, Dark Area, mão com até seis cartas e prévia grande da carta selecionada.
 
-**Controles:** setas esquerda/direita navegam o catálogo; clique nas cartas da mão para selecioná-las; N inicia uma nova partida; R repõe a mão; Enter conclui a preparação; Esc fecha a janela. Os botões laterais oferecem Descartar, Planejar evolução, Evoluir, Batalha e Pontos.
+**Controles:** o modo AUTO inicia ao abrir a janela. A (ou Espaço) pausa/retoma; +/- muda a velocidade (0,55 / 1,1 / 2,2 segundos por passo). N inicia uma partida manual nova; setas esquerda/direita navegam o catálogo; clique na mão para selecionar cartas; R repõe a mão; Enter conclui a preparação; Esc fecha a janela. Os botões laterais oferecem Nova, Auto, velocidade, Descartar, Planejar evolução, Evoluir, Batalha e Pontos.
 
 Os JPGs são carregados da pasta `data/card_images_original/Bo-1.jpg`, etc., na **raiz do repositório**; há fallback para `data/card_images/` com miniaturas. Os caminhos são definidos na configuração do CMake, portanto não é necessário copiar imagens para Release. Se as imagens ainda não foram baixadas, o tabuleiro mostra o número da carta e "SEM JPG".
+
+**Jogo automático:** o controlador em `src/auto_player.cpp` avança cada fase em um temporizador Win32: repõe cartas, tenta uma evolução válida, conclui a preparação de ambos os jogadores, evolui, resolve a batalha e os pontos; a partida encerra segundo o motor. Se não houver cartas Bo suficientes com regras verificadas para construir dois decks de 30, ativa **DEMO VISUAL**: percorre as imagens das cartas automaticamente, sem atribuir vitórias, ataques ou pontos fictícios. O status e cabeçalho identificam explicitamente o modo.
 
 O modo prévia exibe cartas do catálogo mesmo sem dados suficientes para jogar. Uma partida só é iniciada quando existirem **10 nomes distintos de Digimon verificados, incluindo um Level III**, permitindo 30 cartas no baralho (3 cópias por nome). O adversário passa nas fases de evolução e preparação; habilidades especiais não verificadas, suportes e Option Cards ainda não são jogáveis. Não é uma emulação exata do WonderSwan.
 
