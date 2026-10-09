@@ -74,7 +74,7 @@ void panel(Graphics& g,int x,int y,int w,int h,const std::wstring& name,Color c)
     caption(g,name,(REAL)x+8,(REAL)y+3,15,rgb(7,22,34),true);
 }
 void registerHit(Action a,int index,REAL x,REAL y,REAL w,REAL h) {
-    Hotspot h;h.rect=RectF(x,y,w,h);h.action=a;h.index=index;hotspots.push_back(h);
+    Hotspot hit;hit.rect=RectF(x,y,w,h);hit.action=a;hit.index=index;hotspots.push_back(hit);
 }
 void button(Graphics& g,Action a,const std::wstring& label,int x,int y,int w,int h,bool available) {
     Color edge=available?rgb(94,213,220):rgb(76,96,107);
