@@ -487,6 +487,18 @@ int cardNumber(const hc::CatalogCard* c) {
 LRESULT CALLBACK windowProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
     switch(msg) {
         case WM_ERASEBKGND:return 1;
+        case WM_TIMER:
+            if(wp==AUTO_TIMER && autoRunning) {
+                static DWORD lastStep=0;
+                DWORD now=GetTickCount();
+                if(now-lastStep>=autoInterval) {
+                    lastStep=now;
+                    advanceAutomatic();
+                    InvalidateRect(hwnd,0,FALSE);
+                }
+                return 0;
+            }
+            break;
         case WM_SIZE:InvalidateRect(hwnd,0,FALSE);return 0;
         case WM_LBUTTONDOWN: {
             if(screenScale<=0)return 0;
@@ -507,6 +519,8 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             else if(wp==VK_RIGHT)gameAction(NEXT,0);
             else if(wp=='N')gameAction(NEW_GAME,0);
             else if(wp=='R')gameAction(REFILL,0);
+            else if(wp=='A' || wp==VK_SPACE)gameAction(AUTO_TOGGLE,0);
+            else if(wp==VK_ADD || wp==VK_OEM_PLUS || wp==VK_SUBTRACT || wp==VK_OEM_MINUS)gameAction(SPEED,0);
             else if(wp==VK_RETURN)gameAction(PREPARE,0);
             else break;
             InvalidateRect(hwnd,0,FALSE);
@@ -532,7 +546,10 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             EndPaint(hwnd,&ps);
             return 0;
         }
-        case WM_DESTROY:PostQuitMessage(0);return 0;
+        case WM_DESTROY:
+            KillTimer(hwnd,AUTO_TIMER);
+            PostQuitMessage(0);
+            return 0;
     }
     return DefWindowProcW(hwnd,msg,wp,lp);
 }
@@ -563,6 +580,12 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,LPWSTR,int show) {
     if(!hwnd){GdiplusShutdown(gdiplusToken);return 4;}
     ShowWindow(hwnd,show);
     UpdateWindow(hwnd);
+    gameAction(AUTO_TOGGLE,0);
+    if(!SetTimer(hwnd,AUTO_TIMER,250,0)) {
+        autoRunning=false;
+        feedback=L"Nao foi possivel inicializar o temporizador.";
+    }
+    InvalidateRect(hwnd,0,FALSE);
     MSG message;
     while(GetMessageW(&message,0,0,0)>0) {
         TranslateMessage(&message);
