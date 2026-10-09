@@ -134,7 +134,7 @@ void cardBox(Graphics& g,const hc::CatalogCard* c,REAL x,REAL y,REAL w,REAL h,bo
         REAL iw=(REAL)img->GetWidth(),ih=(REAL)img->GetHeight();
         REAL scale=std::min((w-8)/iw,(h-8)/ih);
         REAL rw=iw*scale,rh=ih*scale;
-        g.DrawImage(img,RectF(x+(w-rw)/2,y+(h-rh)/2,rw,rh));
+        g.DrawImage(img.get(),RectF(x+(w-rw)/2,y+(h-rh)/2,rw,rh));
     } else {
         fill(g,x+5,y+5,w-10,h-10,rgb(38,66,93));
         caption(g,wide(c->id),x+9,y+h/2-14,w>90?18:12,rgb(249,224,148),true);
