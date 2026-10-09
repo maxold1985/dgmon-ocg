@@ -19,5 +19,9 @@ cmake --build "%BUILD%" --config Release --parallel
 if errorlevel 1 exit /b 1
 ctest --test-dir "%BUILD%" -C Release --output-on-failure
 if errorlevel 1 exit /b 1
-"%BUILD%\Release\hc_cards.exe" "%BUILD%\data\cards.csv" --demo
-exit /b %errorlevel%
+if not exist "%BUILD%\Release\hc_card_viewer.exe" (
+ echo ERROR: hc_card_viewer.exe not generated
+ exit /b 1
+)
+start "" "%CD%\%BUILD%\Release\hc_card_viewer.exe"
+exit /b 0
