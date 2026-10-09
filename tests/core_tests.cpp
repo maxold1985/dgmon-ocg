@@ -2,7 +2,8 @@
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
-#include <cassert>\n#include <cstdlib>
+#include <cassert>
+#include <cstdlib>
 #include <iostream>
 #include <vector>
 #include <string>
